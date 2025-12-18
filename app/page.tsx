@@ -1,65 +1,126 @@
-import Image from "next/image";
+import { BeforeAfterSlider } from "@/components/before-after-slider"
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-background p-4 md:p-8">
+      <div className="mx-auto max-w-6xl space-y-8">
+        {/* Header */}
+        <header className="text-center space-y-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-balance text-foreground">画像比較ツール</h1>
+          <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
+            スライダーをドラッグして、Before/After画像を簡単に比較できます
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        </header>
+
+        {/* Main Comparison Slider */}
+        <section className="space-y-6">
+          <div className="space-y-3">
+            <h2 className="text-2xl font-semibold text-foreground">建物の改築 - ビフォー/アフター</h2>
+            <p className="text-muted-foreground">スライダーを左右にドラッグして建物の変化を確認してください</p>
+          </div>
+          <BeforeAfterSlider
+            beforeImage="/before-house.png"
+            afterImage="/after-house.jpg"
+            beforeLabel="改築前"
+            afterLabel="改築後"
+            className="w-full shadow-2xl"
+            defaultBeforeScale={120}
+            defaultBeforeX={0}
+            defaultBeforeY={0}
+            defaultAfterScale={100}
+            defaultAfterX={0}
+            defaultAfterY={0}
+          />
+        </section>
+
+        {/* Additional Examples */}
+        <section className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold text-foreground">例 1: 別角度からの改築</h3>
+            <BeforeAfterSlider
+              beforeImage="/before-house-2.png"
+              afterImage="/after-house-2.jpg"
+              beforeLabel="改築前"
+              afterLabel="改築後"
+              className="shadow-lg"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold text-foreground">例 2: 松戸市の住宅改築</h3>
+            <BeforeAfterSlider
+              beforeImage="/before-house-3.png"
+              afterImage="/after-house-3.png"
+              beforeLabel="改築前"
+              afterLabel="改築後"
+              className="shadow-lg"
+              defaultBeforeScale={125}
+              defaultBeforeX={-15}
+              defaultBeforeY={6}
+              defaultAfterScale={100}
+              defaultAfterX={0}
+              defaultAfterY={0}
+            />
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="space-y-6 pt-8">
+          <h2 className="text-2xl font-semibold text-center text-foreground">機能</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-3 rounded-lg border border-border bg-card p-6 text-card-foreground">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold">直感的な操作</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                スライダーをドラッグするだけで簡単に画像を比較できます
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border bg-card p-6 text-card-foreground">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold">レスポンシブ対応</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                デスクトップ、タブレット、スマートフォンで最適な表示
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border bg-card p-6 text-card-foreground">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold">高速パフォーマンス</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                スムーズでラグのない滑らかなスライダー操作
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
+          <p>画像比較ツール - Before/Afterを視覚的に比較</p>
+        </footer>
+      </div>
+    </main>
+  )
 }
