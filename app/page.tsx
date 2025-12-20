@@ -79,11 +79,17 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10">
-              <Image src="/fda_logo_mark_wg.png" alt="FDA Logo" width={40} height={40} priority />
+              <Image
+                src="/freedom-logo-mark-teal-on-white.png"
+                alt="FREEDOM Logo Mark"
+                width={40}
+                height={40}
+                priority
+              />
             </div>
             <div className="h-6">
               <Image 
-                src="/fda_logo_alphabet.png" 
+                src="/freedom-architects-wordmark-black.png"
                 alt="FREEDOM ARCHITECTS" 
                 width={180} 
                 height={22} 
@@ -148,7 +154,13 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center gap-6 text-center">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10">
-                <Image src="/fda_logo_mark_gw.png" alt="FREEDOM" width={40} height={40} priority />
+                <Image
+                  src="/freedom-logo-mark-white-on-teal.png"
+                  alt="FREEDOM Logo Mark"
+                  width={40}
+                  height={40}
+                  priority
+                />
               </div>
             </div>
             <div className="text-[10px] tracking-[0.12em] text-white/70">

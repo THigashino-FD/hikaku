@@ -31,8 +31,8 @@
 ### CASE 01
 - **タイトル:** CASE 01
 - **説明:** デフォルトサンプル
-- **Before画像:** `/before-house.png`
-- **After画像:** `/after-house.jpg`
+- **Before画像:** `/case-01-before.png`
+- **After画像:** `/case-01-after.jpg`
 - **初期設定:**
   - Before: 拡大率120%
   - After: 拡大率100%
@@ -40,15 +40,15 @@
 ### CASE 02
 - **タイトル:** CASE 02
 - **説明:** デフォルトサンプル
-- **Before画像:** `/before-house-2.png`
-- **After画像:** `/after-house-2.jpg`
+- **Before画像:** `/case-02-before.png`
+- **After画像:** `/case-02-after.jpg`
 - **初期設定:** 両方とも100%
 
 ### CASE 03
 - **タイトル:** CASE 03
 - **説明:** デフォルトサンプル
-- **Before画像:** `/before-house-3.png`
-- **After画像:** `/after-house-3.png`
+- **Before画像:** `/case-03-before.png`
+- **After画像:** `/case-03-after.png`
 - **初期設定:** 両方とも100%
 
 ---
