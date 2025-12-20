@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
+import Image from "next/image"
 import {
   CaseRecord,
   ImageRecord,
@@ -24,6 +25,8 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   const [editedCase, setEditedCase] = useState<CaseRecord>(caseRecord)
   const [beforeImageUrl, setBeforeImageUrl] = useState<string>("")
   const [afterImageUrl, setAfterImageUrl] = useState<string>("")
+  const [beforeImageLoaded, setBeforeImageLoaded] = useState(false)
+  const [afterImageLoaded, setAfterImageLoaded] = useState(false)
 
   useEffect(() => {
     const loadImages = async () => {
@@ -32,9 +35,11 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
         if (image) {
           const url = createObjectURL(image.blob)
           setBeforeImageUrl(url)
+          setBeforeImageLoaded(false)
         }
       } else {
         setBeforeImageUrl("")
+        setBeforeImageLoaded(false)
       }
 
       if (editedCase.afterImageId) {
@@ -42,9 +47,11 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
         if (image) {
           const url = createObjectURL(image.blob)
           setAfterImageUrl(url)
+          setAfterImageLoaded(false)
         }
       } else {
         setAfterImageUrl("")
+        setAfterImageLoaded(false)
       }
     }
 
@@ -146,11 +153,21 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
               </select>
 
               {beforeImageUrl && (
-                <div className="overflow-hidden rounded border">
-                  <img
+                <div className="relative overflow-hidden rounded border h-48">
+                  {!beforeImageLoaded && (
+                    <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+                      <svg className="h-8 w-8 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <Image
                     src={beforeImageUrl}
                     alt="Before preview"
-                    className="h-48 w-full object-cover"
+                    fill
+                    className="object-cover"
+                    onLoad={() => setBeforeImageLoaded(true)}
+                    sizes="(max-width: 768px) 100vw, 50vw"
                   />
                 </div>
               )}
@@ -178,11 +195,21 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
               </select>
 
               {afterImageUrl && (
-                <div className="overflow-hidden rounded border">
-                  <img
+                <div className="relative overflow-hidden rounded border h-48">
+                  {!afterImageLoaded && (
+                    <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+                      <svg className="h-8 w-8 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <Image
                     src={afterImageUrl}
                     alt="After preview"
-                    className="h-48 w-full object-cover"
+                    fill
+                    className="object-cover"
+                    onLoad={() => setAfterImageLoaded(true)}
+                    sizes="(max-width: 768px) 100vw, 50vw"
                   />
                 </div>
               )}
@@ -194,8 +221,85 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
         <section className="space-y-4 rounded-lg border bg-card p-6">
           <h2 className="text-lg font-semibold">初期表示設定</h2>
           <p className="text-sm text-muted-foreground">
-            閲覧ページで最初に表示される際のズーム・位置を設定します
+            閲覧ページで最初に表示される際のスライダー位置・ズーム・位置・アニメーションを設定します
           </p>
+
+          {/* 初期スライダー位置 */}
+          <div className="space-y-4 rounded border bg-muted/30 p-4">
+            <h3 className="font-semibold">初期スライダー位置</h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">
+                  スライダー位置: {editedCase.initialSliderPosition}%
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {editedCase.initialSliderPosition < 30 && "Before中心"}
+                  {editedCase.initialSliderPosition >= 30 && editedCase.initialSliderPosition < 70 && "バランス"}
+                  {editedCase.initialSliderPosition >= 70 && "After中心"}
+                </span>
+              </div>
+              <Slider
+                value={[editedCase.initialSliderPosition]}
+                onValueChange={(value) =>
+                  setEditedCase({ ...editedCase, initialSliderPosition: value[0] })
+                }
+                min={0}
+                max={100}
+                step={1}
+              />
+              <p className="text-xs text-muted-foreground">
+                左(0%)はBefore全表示、右(100%)はAfter全表示、中央(50%)は均等表示
+              </p>
+            </div>
+          </div>
+
+          {/* アニメーション設定 */}
+          <div className="space-y-4 rounded border bg-muted/30 p-4">
+            <h3 className="font-semibold">アニメーション</h3>
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <label className="flex flex-1 cursor-pointer items-center gap-3 rounded border bg-background p-3 transition-colors hover:bg-muted">
+                  <input
+                    type="radio"
+                    name={`animation-${editedCase.id}`}
+                    value="none"
+                    checked={editedCase.animationType === 'none'}
+                    onChange={(e) =>
+                      setEditedCase({ ...editedCase, animationType: e.target.value as 'none' | 'demo' })
+                    }
+                    className="h-4 w-4"
+                  />
+                  <div>
+                    <div className="font-medium">なし</div>
+                    <div className="text-xs text-muted-foreground">
+                      初期位置で静止表示
+                    </div>
+                  </div>
+                </label>
+                <label className="flex flex-1 cursor-pointer items-center gap-3 rounded border bg-background p-3 transition-colors hover:bg-muted">
+                  <input
+                    type="radio"
+                    name={`animation-${editedCase.id}`}
+                    value="demo"
+                    checked={editedCase.animationType === 'demo'}
+                    onChange={(e) =>
+                      setEditedCase({ ...editedCase, animationType: e.target.value as 'none' | 'demo' })
+                    }
+                    className="h-4 w-4"
+                  />
+                  <div>
+                    <div className="font-medium">デモ</div>
+                    <div className="text-xs text-muted-foreground">
+                      自動でBefore/Afterを見せる
+                    </div>
+                  </div>
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                デモアニメーションは、初期位置を基準に左右へ動きます（約4秒）
+              </p>
+            </div>
+          </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* Before Settings */}

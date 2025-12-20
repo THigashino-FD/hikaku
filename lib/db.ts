@@ -28,6 +28,8 @@ export interface CaseRecord {
     before: ViewSettings;
     after: ViewSettings;
   };
+  initialSliderPosition: number; // 初期スライダー位置（0-100%）
+  animationType: 'none' | 'demo'; // アニメーション種別
   createdAt: number;
   updatedAt: number;
 }
@@ -55,7 +57,7 @@ interface HikakuDB extends DBSchema {
 }
 
 const DB_NAME = 'hikaku-editor';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 初期位置・アニメ種別追加のため更新
 
 let dbInstance: IDBPDatabase<HikakuDB> | null = null;
 
@@ -65,7 +67,7 @@ export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
   }
 
   dbInstance = await openDB<HikakuDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade(db, oldVersion, newVersion, transaction) {
       // images store
       if (!db.objectStoreNames.contains('images')) {
         const imageStore = db.createObjectStore('images', { keyPath: 'id' });
@@ -81,6 +83,28 @@ export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
       // app store
       if (!db.objectStoreNames.contains('app')) {
         db.createObjectStore('app', { keyPath: 'key' });
+      }
+
+      // マイグレーション: v1 -> v2（初期位置・アニメ種別追加）
+      if (oldVersion < 2 && newVersion >= 2) {
+        const caseStore = transaction.objectStore('cases');
+        caseStore.openCursor().then(function migrateCursor(cursor) {
+          if (!cursor) return;
+          const record = cursor.value as any;
+          
+          // 既存レコードにフィールドを追加
+          if (record.initialSliderPosition === undefined) {
+            record.initialSliderPosition = 50; // デフォルト: 中央
+          }
+          if (record.animationType === undefined) {
+            // CASE 01のみデモアニメーション、それ以外はなし
+            record.animationType = record.order === 0 ? 'demo' : 'none';
+          }
+          
+          cursor.update(record).then(() => {
+            return cursor.continue().then(migrateCursor);
+          });
+        });
       }
     },
   });

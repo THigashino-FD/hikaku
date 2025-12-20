@@ -153,12 +153,12 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 md:px-10">
           <div className="flex flex-col items-center justify-center gap-6 text-center">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10">
+              <div className="h-16 w-16">
                 <Image
                   src="/freedom-logo-mark-white-on-teal.png"
                   alt="FREEDOM Logo Mark"
-                  width={40}
-                  height={40}
+                  width={64}
+                  height={64}
                   priority
                 />
               </div>
@@ -280,6 +280,8 @@ function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseViewerProps
         defaultAfterScale={caseRecord.view.after.scale}
         defaultAfterX={caseRecord.view.after.x}
         defaultAfterY={caseRecord.view.after.y}
+        initialSliderPosition={caseRecord.initialSliderPosition}
+        animationType={caseRecord.animationType}
         onSaveViewSettings={(beforeSettings, afterSettings) =>
           onSaveViewSettings(caseRecord.id, beforeSettings, afterSettings)
         }

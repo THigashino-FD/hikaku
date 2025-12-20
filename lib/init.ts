@@ -124,6 +124,8 @@ export async function setupDefaultCases(): Promise<void> {
         before: { scale: 120, x: 0, y: 0 },
         after: { scale: 100, x: 0, y: 0 },
       },
+      initialSliderPosition: 50,
+      animationType: 'demo', // CASE 01はデモアニメーション
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -140,6 +142,8 @@ export async function setupDefaultCases(): Promise<void> {
         before: { scale: 100, x: 0, y: 0 },
         after: { scale: 100, x: 0, y: 0 },
       },
+      initialSliderPosition: 50,
+      animationType: 'none',
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -156,6 +160,8 @@ export async function setupDefaultCases(): Promise<void> {
         before: { scale: 100, x: 0, y: 0 },
         after: { scale: 100, x: 0, y: 0 },
       },
+      initialSliderPosition: 50,
+      animationType: 'none',
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };

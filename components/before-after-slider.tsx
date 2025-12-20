@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
+import Image from "next/image"
 
 interface BeforeAfterSliderProps {
   beforeImage: string
@@ -18,11 +19,15 @@ interface BeforeAfterSliderProps {
   defaultBeforeY?: number
   defaultAfterX?: number
   defaultAfterY?: number
+  initialSliderPosition?: number // 初期スライダー位置（0-100%）
+  animationType?: 'none' | 'demo' // アニメーション種別
   onSaveViewSettings?: (
     beforeSettings: { scale: number; x: number; y: number },
     afterSettings: { scale: number; x: number; y: number }
   ) => void
 }
+
+type ComparisonMode = "slider" | "sideBySide"
 
 export function BeforeAfterSlider({
   beforeImage,
@@ -36,6 +41,8 @@ export function BeforeAfterSlider({
   defaultBeforeY = 0,
   defaultAfterX = 0,
   defaultAfterY = 0,
+  initialSliderPosition = 50,
+  animationType = 'none',
   onSaveViewSettings,
 }: BeforeAfterSliderProps) {
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
@@ -44,7 +51,7 @@ export function BeforeAfterSlider({
     return Number.isFinite(n) ? n : null
   }
 
-  const [sliderPosition, setSliderPosition] = useState(50)
+  const [sliderPosition, setSliderPosition] = useState(initialSliderPosition)
   const [isDragging, setIsDragging] = useState(false)
   const [beforeScale, setBeforeScale] = useState(defaultBeforeScale)
   const [afterScale, setAfterScale] = useState(defaultAfterScale)
@@ -55,13 +62,164 @@ export function BeforeAfterSlider({
   const [showControls, setShowControls] = useState(false)
   const [customBeforeUrl, setCustomBeforeUrl] = useState("")
   const [customAfterUrl, setCustomAfterUrl] = useState("")
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("slider")
+  const [beforeImageLoaded, setBeforeImageLoaded] = useState(false)
+  const [afterImageLoaded, setAfterImageLoaded] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [animationCancelled, setAnimationCancelled] = useState(false)
+  
   const containerRef = useRef<HTMLDivElement>(null)
+  const fullscreenRef = useRef<HTMLDivElement>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const isAnimatingRef = useRef(false) // ロジック制御用のRef
 
   const displayBeforeImage = customBeforeUrl || beforeImage
   const displayAfterImage = customAfterUrl || afterImage
 
+  // 画像URLが変わったら読み込み状態をリセット
+  useEffect(() => {
+    setBeforeImageLoaded(false)
+    setAfterImageLoaded(false)
+    setAnimationCancelled(false)
+  }, [displayBeforeImage, displayAfterImage])
+
+  // アニメーションをキャンセルする関数
+  const cancelAnimation = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+    isAnimatingRef.current = false
+    setIsAnimating(false)
+    setAnimationCancelled(true)
+  }
+
+  // 初期表示アニメーション（自動リベール）
+  // 目的: 「スライダーを動かすと Before/After を理解できる」ことを、1回のデモで伝える
+  // 方針: 初期位置→(After側を見せる)→初期位置→(Before側を見せる)→初期位置（途中で少し止める）
+  useEffect(() => {
+    // animationTypeが'demo'以外の場合はアニメーションを実行しない
+    if (animationType !== 'demo') {
+      return
+    }
+
+    // 既にキャンセルされているか、既に実行中の場合は何もしない
+    if (animationCancelled || isAnimatingRef.current) {
+      return
+    }
+
+    // OS設定で「視差効果を減らす」を尊重
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    if (prefersReducedMotion) {
+      return
+    }
+
+    let startTime: number | null = null
+
+    // 初期位置を基準に、左右に18%ずつ動く
+    const basePos = initialSliderPosition
+    const rightPos = Math.min(basePos + 18, 100)
+    const leftPos = Math.max(basePos - 18, 0)
+
+    // タイムライン（ms）: "止まる"を挟んで、Before/Afterが切り替わることを認知しやすくする
+    const keyframes: Array<{ t: number; pos: number }> = [
+      { t: 0, pos: basePos },
+      { t: 300, pos: basePos },
+      { t: 1400, pos: rightPos },
+      { t: 1700, pos: rightPos },
+      { t: 2800, pos: leftPos },
+      { t: 3100, pos: leftPos },
+      { t: 4000, pos: basePos },
+    ]
+    const totalDuration = keyframes[keyframes.length - 1]!.t
+
+    const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2
+
+    const positionAt = (elapsed: number) => {
+      if (elapsed <= 0) return keyframes[0]!.pos
+      if (elapsed >= totalDuration) return keyframes[keyframes.length - 1]!.pos
+
+      for (let i = 0; i < keyframes.length - 1; i++) {
+        const a = keyframes[i]!
+        const b = keyframes[i + 1]!
+        if (elapsed >= a.t && elapsed <= b.t) {
+          if (a.pos === b.pos || b.t === a.t) return a.pos
+          const raw = (elapsed - a.t) / (b.t - a.t)
+          const eased = easeInOutSine(raw)
+          return a.pos + (b.pos - a.pos) * eased
+        }
+      }
+      return basePos
+    }
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp
+      const elapsed = timestamp - startTime
+      const pos = positionAt(elapsed)
+      setSliderPosition(pos)
+
+      if (elapsed < totalDuration && isAnimatingRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animate)
+      } else {
+        setSliderPosition(basePos)
+        isAnimatingRef.current = false
+        setIsAnimating(false)
+      }
+    }
+
+    // 画像が両方読み込まれてからアニメーション開始
+    if (beforeImageLoaded && afterImageLoaded) {
+      isAnimatingRef.current = true
+      setIsAnimating(true)
+      animationFrameRef.current = requestAnimationFrame(animate)
+    }
+
+    return () => {
+      // ここでのクリーンアップは「本当にアンマウントされた時」または「画像URLが変わった時」に限定される
+      // ただし、depsからisAnimatingを外したことで、setIsAnimatingによる再実行は起きない
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [beforeImageLoaded, afterImageLoaded, animationType, animationCancelled, initialSliderPosition]) // animationTypeとinitialSliderPositionを追加
+
+  // フルスクリーン切り替え
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      if (fullscreenRef.current?.requestFullscreen) {
+        fullscreenRef.current.requestFullscreen()
+      }
+      setIsFullscreen(true)
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+      }
+      setIsFullscreen(false)
+    }
+  }
+
+  // フルスクリーン終了イベントのリスナー
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
   const handleMove = (clientX: number) => {
     if (!containerRef.current) return
+
+    // アニメーション中の場合は中断
+    if (isAnimating) {
+      cancelAnimation()
+    }
 
     const rect = containerRef.current.getBoundingClientRect()
     const x = clientX - rect.left
@@ -83,6 +241,10 @@ export function BeforeAfterSlider({
   }
 
   const handleStart = () => {
+    // アニメーション中の場合は中断
+    if (isAnimating) {
+      cancelAnimation()
+    }
     setIsDragging(true)
   }
 
@@ -131,18 +293,58 @@ export function BeforeAfterSlider({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => setShowControls(!showControls)} className="gap-2 bg-transparent">
+    <div ref={fullscreenRef} className={cn("space-y-4", isFullscreen && "fixed inset-0 z-50 bg-background p-6 overflow-auto")}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowControls(!showControls)} className="gap-2 bg-transparent">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+              />
+            </svg>
+            {showControls ? "調整パネルを閉じる" : "縮尺・位置を調整"}
+          </Button>
+
+          {/* 比較モード切替 */}
+          <div className="flex gap-1 rounded-md border bg-background p-1">
+            <Button
+              variant={comparisonMode === "slider" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setComparisonMode("slider")}
+              className="h-7 gap-1.5 px-2"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01" />
+              </svg>
+              スライダー
+            </Button>
+            <Button
+              variant={comparisonMode === "sideBySide" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setComparisonMode("sideBySide")}
+              className="h-7 gap-1.5 px-2"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v16M9 4l-6 6m6-6l6 6" />
+              </svg>
+              左右比較
+            </Button>
+          </div>
+        </div>
+
+        {/* フルスクリーンボタン */}
+        <Button variant="outline" size="sm" onClick={toggleFullscreen} className="gap-2 bg-transparent">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-            />
+            {isFullscreen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            )}
           </svg>
-          {showControls ? "調整パネルを閉じる" : "縮尺・位置を調整"}
+          {isFullscreen ? "終了" : "全画面"}
         </Button>
       </div>
 
@@ -411,73 +613,160 @@ export function BeforeAfterSlider({
         </div>
       )}
 
-      <div
-        ref={containerRef}
-        className={cn("relative w-full overflow-hidden rounded-xl select-none", className)}
-        style={{ aspectRatio: "16/9" }}
-      >
-        {/* Before Image (Bottom Layer) */}
-        <div className="absolute inset-0">
-          <img
-            src={displayBeforeImage || "/placeholder.svg"}
-            alt={beforeLabel}
-            className="h-full w-full object-cover"
-            style={{
-              transform: `translate(${beforeX}px, ${beforeY}px) scale(${beforeScale / 100})`,
-              transformOrigin: "center center",
-            }}
-            draggable={false}
-          />
-          <div className="absolute left-4 top-4 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm md:text-sm">
-            {beforeLabel}
-          </div>
-        </div>
-
-        {/* After Image (Top Layer with Clip) */}
-        <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
-          <img
-            src={displayAfterImage || "/placeholder.svg"}
-            alt={afterLabel}
-            className="h-full w-full object-cover"
-            style={{
-              transform: `translate(${afterX}px, ${afterY}px) scale(${afterScale / 100})`,
-              transformOrigin: "center center",
-            }}
-            draggable={false}
-          />
-          <div className="absolute right-4 top-4 rounded-full bg-primary/90 px-3 py-1.5 text-xs font-medium text-primary-foreground backdrop-blur-sm md:text-sm">
-            {afterLabel}
-          </div>
-        </div>
-
-        {/* Slider Handle */}
+      {/* Comparison Container */}
+      {comparisonMode === "slider" ? (
         <div
-          className="absolute inset-y-0 flex cursor-ew-resize items-center"
-          style={{ left: `${sliderPosition}%` }}
-          onMouseDown={handleStart}
-          onTouchStart={handleStart}
+          ref={containerRef}
+          className={cn("relative w-full overflow-hidden rounded-xl select-none", className)}
+          style={{ aspectRatio: "16/9" }}
+          onClick={() => {
+            // クリックでアニメーション中断
+            if (isAnimating) {
+              cancelAnimation()
+            }
+          }}
         >
-          {/* Vertical Line */}
-          <div className="relative h-full w-0.5 bg-primary/80 shadow-md">
-            {/* Handle Circle */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-lg ring-1 ring-black/5">
-                <svg className="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          {/* Before Image (Bottom Layer) with loading placeholder */}
+          <div className="absolute inset-0">
+            {!beforeImageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+                <svg className="h-12 w-12 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <svg
-                  className="h-6 w-6 text-primary-foreground -ml-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </div>
+            )}
+            <Image
+              src={displayBeforeImage || "/placeholder.svg"}
+              alt={beforeLabel}
+              fill
+              className={cn("object-cover transition-opacity duration-300", !beforeImageLoaded && "opacity-0")}
+              style={{
+                transform: `translate(${beforeX}px, ${beforeY}px) scale(${beforeScale / 100})`,
+                transformOrigin: "center center",
+              }}
+              draggable={false}
+              onLoad={() => setBeforeImageLoaded(true)}
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+            />
+            <div className="absolute left-4 top-4 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm md:text-sm">
+              {beforeLabel}
+            </div>
+          </div>
+
+          {/* After Image (Top Layer with Clip) with loading placeholder */}
+          <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
+            {!afterImageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+                <svg className="h-12 w-12 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
+              </div>
+            )}
+            <Image
+              src={displayAfterImage || "/placeholder.svg"}
+              alt={afterLabel}
+              fill
+              className={cn("object-cover transition-opacity duration-300", !afterImageLoaded && "opacity-0")}
+              style={{
+                transform: `translate(${afterX}px, ${afterY}px) scale(${afterScale / 100})`,
+                transformOrigin: "center center",
+              }}
+              draggable={false}
+              onLoad={() => setAfterImageLoaded(true)}
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+            />
+            <div className="absolute right-4 top-4 rounded-full bg-primary/90 px-3 py-1.5 text-xs font-medium text-primary-foreground backdrop-blur-sm md:text-sm">
+              {afterLabel}
+            </div>
+          </div>
+
+          {/* Slider Handle */}
+          <div
+            className="absolute inset-y-0 flex cursor-ew-resize items-center"
+            style={{ left: `${sliderPosition}%` }}
+            onMouseDown={handleStart}
+            onTouchStart={handleStart}
+          >
+            {/* Vertical Line */}
+            <div className="relative h-full w-0.5 bg-primary/80 shadow-md">
+              {/* Handle Circle */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-lg ring-1 ring-black/5">
+                  <svg className="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <svg
+                    className="h-6 w-6 text-primary-foreground -ml-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        /* Side by Side Mode */
+        <div className={cn("grid grid-cols-2 gap-4", className)}>
+          <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: "16/9" }}>
+            {!beforeImageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+                <svg className="h-12 w-12 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+            <Image
+              src={displayBeforeImage || "/placeholder.svg"}
+              alt={beforeLabel}
+              fill
+              className={cn("object-cover transition-opacity duration-300", !beforeImageLoaded && "opacity-0")}
+              style={{
+                transform: `translate(${beforeX}px, ${beforeY}px) scale(${beforeScale / 100})`,
+                transformOrigin: "center center",
+              }}
+              draggable={false}
+              onLoad={() => setBeforeImageLoaded(true)}
+              priority
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 40vw, 35vw"
+            />
+            <div className="absolute left-4 top-4 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm md:text-sm">
+              {beforeLabel}
+            </div>
+          </div>
+          <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: "16/9" }}>
+            {!afterImageLoaded && (
+              <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+                <svg className="h-12 w-12 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+            <Image
+              src={displayAfterImage || "/placeholder.svg"}
+              alt={afterLabel}
+              fill
+              className={cn("object-cover transition-opacity duration-300", !afterImageLoaded && "opacity-0")}
+              style={{
+                transform: `translate(${afterX}px, ${afterY}px) scale(${afterScale / 100})`,
+                transformOrigin: "center center",
+              }}
+              draggable={false}
+              onLoad={() => setAfterImageLoaded(true)}
+              priority
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 40vw, 35vw"
+            />
+            <div className="absolute right-4 top-4 rounded-full bg-primary/90 px-3 py-1.5 text-xs font-medium text-primary-foreground backdrop-blur-sm md:text-sm">
+              {afterLabel}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
