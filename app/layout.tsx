@@ -1,15 +1,15 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
-  title: "画像比較ツール - Before/After スライダー",
-  description: "スライダーをドラッグしてBefore/After画像を簡単に比較できるツール",
+  title: "NEUTRAL COMPARE - FREEDOM ARCHITECTS",
+  description:
+    "設計レビュー向けのBefore/After比較ツール。スライダーで差分を確認し、拡大・位置合わせでディテールも精査できます。",
   generator: "v0.app",
   icons: {
     icon: [
@@ -37,9 +37,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`font-sans antialiased`}>
+      <body className={`${_geist.className} ${_geistMono.variable} antialiased`}>
         {children}
-        <Analytics />
       </body>
     </html>
   )

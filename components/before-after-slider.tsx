@@ -18,6 +18,10 @@ interface BeforeAfterSliderProps {
   defaultBeforeY?: number
   defaultAfterX?: number
   defaultAfterY?: number
+  onSaveViewSettings?: (
+    beforeSettings: { scale: number; x: number; y: number },
+    afterSettings: { scale: number; x: number; y: number }
+  ) => void
 }
 
 export function BeforeAfterSlider({
@@ -32,7 +36,14 @@ export function BeforeAfterSlider({
   defaultBeforeY = 0,
   defaultAfterX = 0,
   defaultAfterY = 0,
+  onSaveViewSettings,
 }: BeforeAfterSliderProps) {
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+  const parseNumber = (raw: string) => {
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : null
+  }
+
   const [sliderPosition, setSliderPosition] = useState(50)
   const [isDragging, setIsDragging] = useState(false)
   const [beforeScale, setBeforeScale] = useState(defaultBeforeScale)
@@ -109,10 +120,20 @@ export function BeforeAfterSlider({
     setCustomAfterUrl("")
   }
 
+  const handleSaveViewSettings = () => {
+    if (onSaveViewSettings) {
+      onSaveViewSettings(
+        { scale: beforeScale, x: beforeX, y: beforeY },
+        { scale: afterScale, x: afterX, y: afterY }
+      )
+      alert("初期表示設定として保存しました")
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => setShowControls(!showControls)} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => setShowControls(!showControls)} className="gap-2 bg-transparent">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -126,8 +147,8 @@ export function BeforeAfterSlider({
       </div>
 
       {showControls && (
-        <div className="space-y-6 rounded-lg border border-border bg-card p-6">
-          <div className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4">
+        <div className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="space-y-4 rounded-xl border border-border/60 bg-muted/40 p-4">
             <h4 className="font-semibold text-foreground">画像のURL入力</h4>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -177,36 +198,90 @@ export function BeforeAfterSlider({
                 <label className="text-sm font-medium text-foreground">拡大率: {beforeScale}%</label>
                 <Slider
                   value={[beforeScale]}
-                  onValueChange={(value) => setBeforeScale(value[0])}
+                  onValueChange={(value) => setBeforeScale(clamp(value[0], 50, 200))}
                   min={50}
                   max={200}
                   step={1}
                   className="w-full"
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={50}
+                    max={200}
+                    step={1}
+                    value={beforeScale}
+                    onChange={(e) => {
+                      const n = parseNumber(e.target.value)
+                      if (n === null) return
+                      setBeforeScale(clamp(Math.round(n), 50, 200))
+                    }}
+                    className="h-8 w-24 bg-background"
+                    aria-label="改築前の拡大率（%）"
+                  />
+                  <span className="text-xs text-muted-foreground">%</span>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">水平位置: {beforeX}px</label>
                 <Slider
                   value={[beforeX]}
-                  onValueChange={(value) => setBeforeX(value[0])}
+                  onValueChange={(value) => setBeforeX(clamp(value[0], -200, 200))}
                   min={-200}
                   max={200}
                   step={1}
                   className="w-full"
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={-200}
+                    max={200}
+                    step={1}
+                    value={beforeX}
+                    onChange={(e) => {
+                      const n = parseNumber(e.target.value)
+                      if (n === null) return
+                      setBeforeX(clamp(Math.round(n), -200, 200))
+                    }}
+                    className="h-8 w-24 bg-background"
+                    aria-label="改築前の水平位置（px）"
+                  />
+                  <span className="text-xs text-muted-foreground">px</span>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">垂直位置: {beforeY}px</label>
                 <Slider
                   value={[beforeY]}
-                  onValueChange={(value) => setBeforeY(value[0])}
+                  onValueChange={(value) => setBeforeY(clamp(value[0], -200, 200))}
                   min={-200}
                   max={200}
                   step={1}
                   className="w-full"
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={-200}
+                    max={200}
+                    step={1}
+                    value={beforeY}
+                    onChange={(e) => {
+                      const n = parseNumber(e.target.value)
+                      if (n === null) return
+                      setBeforeY(clamp(Math.round(n), -200, 200))
+                    }}
+                    className="h-8 w-24 bg-background"
+                    aria-label="改築前の垂直位置（px）"
+                  />
+                  <span className="text-xs text-muted-foreground">px</span>
+                </div>
               </div>
             </div>
 
@@ -218,42 +293,96 @@ export function BeforeAfterSlider({
                 <label className="text-sm font-medium text-foreground">拡大率: {afterScale}%</label>
                 <Slider
                   value={[afterScale]}
-                  onValueChange={(value) => setAfterScale(value[0])}
+                  onValueChange={(value) => setAfterScale(clamp(value[0], 50, 200))}
                   min={50}
                   max={200}
                   step={1}
                   className="w-full"
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={50}
+                    max={200}
+                    step={1}
+                    value={afterScale}
+                    onChange={(e) => {
+                      const n = parseNumber(e.target.value)
+                      if (n === null) return
+                      setAfterScale(clamp(Math.round(n), 50, 200))
+                    }}
+                    className="h-8 w-24 bg-background"
+                    aria-label="改築後の拡大率（%）"
+                  />
+                  <span className="text-xs text-muted-foreground">%</span>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">水平位置: {afterX}px</label>
                 <Slider
                   value={[afterX]}
-                  onValueChange={(value) => setAfterX(value[0])}
+                  onValueChange={(value) => setAfterX(clamp(value[0], -200, 200))}
                   min={-200}
                   max={200}
                   step={1}
                   className="w-full"
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={-200}
+                    max={200}
+                    step={1}
+                    value={afterX}
+                    onChange={(e) => {
+                      const n = parseNumber(e.target.value)
+                      if (n === null) return
+                      setAfterX(clamp(Math.round(n), -200, 200))
+                    }}
+                    className="h-8 w-24 bg-background"
+                    aria-label="改築後の水平位置（px）"
+                  />
+                  <span className="text-xs text-muted-foreground">px</span>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">垂直位置: {afterY}px</label>
                 <Slider
                   value={[afterY]}
-                  onValueChange={(value) => setAfterY(value[0])}
+                  onValueChange={(value) => setAfterY(clamp(value[0], -200, 200))}
                   min={-200}
                   max={200}
                   step={1}
                   className="w-full"
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={-200}
+                    max={200}
+                    step={1}
+                    value={afterY}
+                    onChange={(e) => {
+                      const n = parseNumber(e.target.value)
+                      if (n === null) return
+                      setAfterY(clamp(Math.round(n), -200, 200))
+                    }}
+                    className="h-8 w-24 bg-background"
+                    aria-label="改築後の垂直位置（px）"
+                  />
+                  <span className="text-xs text-muted-foreground">px</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Reset Button */}
-          <div className="flex justify-center">
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-3">
             <Button onClick={resetAdjustments} variant="outline" className="gap-2 bg-transparent">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -265,28 +394,41 @@ export function BeforeAfterSlider({
               </svg>
               位置・縮尺をリセット
             </Button>
+            {onSaveViewSettings && (
+              <Button onClick={handleSaveViewSettings} className="gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                  />
+                </svg>
+                この設定を初期表示として保存
+              </Button>
+            )}
           </div>
         </div>
       )}
 
       <div
         ref={containerRef}
-        className={cn("relative w-full overflow-hidden rounded-lg select-none", className)}
+        className={cn("relative w-full overflow-hidden rounded-xl select-none", className)}
         style={{ aspectRatio: "16/9" }}
       >
         {/* Before Image (Bottom Layer) */}
         <div className="absolute inset-0">
           <img
             src={displayBeforeImage || "/placeholder.svg"}
-            alt="Before"
+            alt={beforeLabel}
             className="h-full w-full object-cover"
             style={{
-              transform: `scale(${beforeScale / 100}) translate(${beforeX}px, ${beforeY}px)`,
+              transform: `translate(${beforeX}px, ${beforeY}px) scale(${beforeScale / 100})`,
               transformOrigin: "center center",
             }}
             draggable={false}
           />
-          <div className="absolute left-4 top-4 rounded-md bg-background/90 px-3 py-1.5 text-sm font-medium text-foreground backdrop-blur-sm">
+          <div className="absolute left-4 top-4 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm md:text-sm">
             {beforeLabel}
           </div>
         </div>
@@ -295,15 +437,15 @@ export function BeforeAfterSlider({
         <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}>
           <img
             src={displayAfterImage || "/placeholder.svg"}
-            alt="After"
+            alt={afterLabel}
             className="h-full w-full object-cover"
             style={{
-              transform: `scale(${afterScale / 100}) translate(${afterX}px, ${afterY}px)`,
+              transform: `translate(${afterX}px, ${afterY}px) scale(${afterScale / 100})`,
               transformOrigin: "center center",
             }}
             draggable={false}
           />
-          <div className="absolute right-4 top-4 rounded-md bg-primary/90 px-3 py-1.5 text-sm font-medium text-primary-foreground backdrop-blur-sm">
+          <div className="absolute right-4 top-4 rounded-full bg-primary/90 px-3 py-1.5 text-xs font-medium text-primary-foreground backdrop-blur-sm md:text-sm">
             {afterLabel}
           </div>
         </div>
@@ -316,10 +458,10 @@ export function BeforeAfterSlider({
           onTouchStart={handleStart}
         >
           {/* Vertical Line */}
-          <div className="relative h-full w-0.5 bg-primary shadow-lg">
+          <div className="relative h-full w-0.5 bg-primary/80 shadow-md">
             {/* Handle Circle */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-lg ring-1 ring-black/5">
                 <svg className="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
