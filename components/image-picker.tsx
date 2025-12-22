@@ -4,11 +4,11 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
-import { ImageRecord, createObjectURL, revokeObjectURL } from "@/lib/db"
+import { ImageRecordWithBlob, createObjectURL, revokeObjectURL } from "@/lib/db"
 import { cn } from "@/lib/utils"
 
 interface ImagePickerProps {
-  images: ImageRecord[]
+  images: ImageRecordWithBlob[]
   selectedImageId?: string
   onSelect: (imageId: string | undefined) => void
   label: string

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import {
   CaseRecord,
-  ImageRecord,
+  ImageRecordWithBlob,
   getImageById,
   createObjectURL,
   revokeObjectURL,
@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/toast"
 
 interface CaseEditorProps {
   caseRecord: CaseRecord
-  images: ImageRecord[]
+  images: ImageRecordWithBlob[]
   onSave: (caseRecord: CaseRecord) => void
   onCancel: () => void
 }

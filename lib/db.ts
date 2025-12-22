@@ -12,6 +12,9 @@ export interface ImageRecord {
   createdAt: number;
 }
 
+// 公開APIで使用する型（blobは必ずBlobとして返される）
+export type ImageRecordWithBlob = Omit<ImageRecord, 'blob'> & { blob: Blob };
+
 export interface ViewSettings {
   scale: number;
   x: number;
@@ -170,7 +173,7 @@ export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
 }
 
 // ========== Images ==========
-export async function getAllImages(): Promise<ImageRecord[]> {
+export async function getAllImages(): Promise<ImageRecordWithBlob[]> {
   const db = await getDB();
   const images = await db.getAllFromIndex('images', 'by-createdAt');
   
@@ -181,7 +184,7 @@ export async function getAllImages(): Promise<ImageRecord[]> {
   }));
 }
 
-export async function getImageById(id: string): Promise<ImageRecord | undefined> {
+export async function getImageById(id: string): Promise<ImageRecordWithBlob | undefined> {
   const db = await getDB();
   const img = await db.get('images', id);
   if (!img) return undefined;

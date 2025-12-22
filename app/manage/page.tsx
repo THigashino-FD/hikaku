@@ -10,7 +10,7 @@ import {
   reorderCases,
   CaseRecord,
   getAllImages,
-  ImageRecord,
+  ImageRecordWithBlob,
   getImageById,
 } from "@/lib/db"
 import { initializeApp } from "@/lib/init"
@@ -25,7 +25,7 @@ import { useToast } from "@/components/ui/toast"
 
 export default function ManagePage() {
   const [cases, setCases] = useState<CaseRecord[]>([])
-  const [images, setImages] = useState<ImageRecord[]>([])
+  const [images, setImages] = useState<ImageRecordWithBlob[]>([])
   const [editingCase, setEditingCase] = useState<CaseRecord | null>(null)
   const [showImageLibrary, setShowImageLibrary] = useState(false)
   const [isLoading, setIsLoading] = useState(true)

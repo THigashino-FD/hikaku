@@ -10,6 +10,7 @@ import {
   deleteImage,
   getImagesUsedByCases,
   ImageRecord,
+  ImageRecordWithBlob,
   createObjectURL,
   revokeObjectURL,
   clearAllData,
@@ -24,7 +25,7 @@ interface ImageLibraryProps {
 }
 
 export function ImageLibrary({ onClose }: ImageLibraryProps) {
-  const [images, setImages] = useState<ImageRecord[]>([])
+  const [images, setImages] = useState<ImageRecordWithBlob[]>([])
   const [usageMap, setUsageMap] = useState<Map<string, string[]>>(new Map())
   const [isUploading, setIsUploading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -450,7 +451,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
 }
 
 interface ImageCardProps {
-  image: ImageRecord
+  image: ImageRecordWithBlob
   usage: string[]
   onDelete: (id: string) => void
 }
