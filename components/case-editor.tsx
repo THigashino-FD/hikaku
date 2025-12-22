@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
-import Image from "next/image"
 import {
   CaseRecord,
   ImageRecord,
@@ -13,6 +12,7 @@ import {
   revokeObjectURL,
 } from "@/lib/db"
 import { BeforeAfterSlider } from "@/components/before-after-slider"
+import { ImagePicker } from "@/components/image-picker"
 
 interface CaseEditorProps {
   caseRecord: CaseRecord
@@ -25,8 +25,6 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   const [editedCase, setEditedCase] = useState<CaseRecord>(caseRecord)
   const [beforeImageUrl, setBeforeImageUrl] = useState<string>("")
   const [afterImageUrl, setAfterImageUrl] = useState<string>("")
-  const [beforeImageLoaded, setBeforeImageLoaded] = useState(false)
-  const [afterImageLoaded, setAfterImageLoaded] = useState(false)
 
   useEffect(() => {
     const loadImages = async () => {
@@ -35,11 +33,9 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
         if (image) {
           const url = createObjectURL(image.blob)
           setBeforeImageUrl(url)
-          setBeforeImageLoaded(false)
         }
       } else {
         setBeforeImageUrl("")
-        setBeforeImageLoaded(false)
       }
 
       if (editedCase.afterImageId) {
@@ -47,11 +43,9 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
         if (image) {
           const url = createObjectURL(image.blob)
           setAfterImageUrl(url)
-          setAfterImageLoaded(false)
         }
       } else {
         setAfterImageUrl("")
-        setAfterImageLoaded(false)
       }
     }
 
@@ -132,88 +126,30 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* Before Image */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">改築前（Before）</label>
-              <select
-                value={editedCase.beforeImageId || ""}
-                onChange={(e) =>
-                  setEditedCase({
-                    ...editedCase,
-                    beforeImageId: e.target.value || undefined,
-                  })
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">未選択</option>
-                {images.map((img) => (
-                  <option key={img.id} value={img.id}>
-                    {img.name}
-                  </option>
-                ))}
-              </select>
-
-              {beforeImageUrl && (
-                <div className="relative overflow-hidden rounded border h-48">
-                  {!beforeImageLoaded && (
-                    <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
-                      <svg className="h-8 w-8 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                  <Image
-                    src={beforeImageUrl}
-                    alt="Before preview"
-                    fill
-                    className="object-cover"
-                    onLoad={() => setBeforeImageLoaded(true)}
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                </div>
-              )}
-            </div>
+            <ImagePicker
+              images={images}
+              selectedImageId={editedCase.beforeImageId}
+              onSelect={(imageId) =>
+                setEditedCase({
+                  ...editedCase,
+                  beforeImageId: imageId,
+                })
+              }
+              label="改築前（Before）"
+            />
 
             {/* After Image */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">改築後（After）</label>
-              <select
-                value={editedCase.afterImageId || ""}
-                onChange={(e) =>
-                  setEditedCase({
-                    ...editedCase,
-                    afterImageId: e.target.value || undefined,
-                  })
-                }
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">未選択</option>
-                {images.map((img) => (
-                  <option key={img.id} value={img.id}>
-                    {img.name}
-                  </option>
-                ))}
-              </select>
-
-              {afterImageUrl && (
-                <div className="relative overflow-hidden rounded border h-48">
-                  {!afterImageLoaded && (
-                    <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
-                      <svg className="h-8 w-8 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                  <Image
-                    src={afterImageUrl}
-                    alt="After preview"
-                    fill
-                    className="object-cover"
-                    onLoad={() => setAfterImageLoaded(true)}
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                </div>
-              )}
-            </div>
+            <ImagePicker
+              images={images}
+              selectedImageId={editedCase.afterImageId}
+              onSelect={(imageId) =>
+                setEditedCase({
+                  ...editedCase,
+                  afterImageId: imageId,
+                })
+              }
+              label="改築後（After）"
+            />
           </div>
         </section>
 
