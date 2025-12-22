@@ -68,8 +68,13 @@ test.describe('CASE管理', () => {
     await expect(page.getByText('CASE 02')).toBeVisible();
     await expect(page.getByText('CASE 03')).toBeVisible();
     
-    // 各CASEに編集・複製・削除ボタンがある
-    const editButtons = await page.getByRole('button', { name: '編集' }).count();
+    // 各CASEに共有ボタンがある（3件）
+    const shareButtons = await page.getByRole('button', { name: '共有' }).count();
+    expect(shareButtons).toBe(3);
+    
+    // 「CASE一覧」セクション内の編集ボタンが3つある
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const editButtons = await caseSection.getByRole('button', { name: '編集' }).count();
     expect(editButtons).toBe(3);
   });
 
@@ -83,8 +88,12 @@ test.describe('CASE管理', () => {
   });
 
   test('CASEを編集できる', async ({ page }) => {
-    // 最初のCASEの編集ボタンをクリック
-    await page.getByRole('button', { name: '編集' }).first().click();
+    // 「CASE一覧」セクション内の最初のCASEの編集ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    await caseSection.getByRole('button', { name: '編集' }).first().click();
+    
+    // CASE編集ページの読み込みを待つ
+    await page.waitForTimeout(1000);
     
     // CASE編集ページが表示される
     await expect(page.getByText('CASE編集')).toBeVisible();

@@ -17,6 +17,7 @@ import {
 import { resizeImage, formatFileSize, isAllowedImageType, fetchAndResizeImage } from "@/lib/image-utils"
 import { v4 as uuidv4 } from "uuid"
 import { convertGoogleDriveUrl } from "@/lib/share"
+import { useToast } from "@/components/ui/toast"
 
 interface ImageLibraryProps {
   onClose: () => void
@@ -32,6 +33,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false)
   const [filterUrlOnly, setFilterUrlOnly] = useState(false) // URL画像のみフィルタ
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   const loadData = async () => {
     try {
@@ -60,10 +62,10 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
 
-        if (!isAllowedImageType(file)) {
-          alert(`${file.name} はサポートされていない画像形式です`)
-          continue
-        }
+      if (!isAllowedImageType(file)) {
+        showToast(`${file.name} はサポートされていない画像形式です`, "error")
+        continue
+      }
 
         // リサイズと最適化
         const { blob, width, height } = await resizeImage(file, 2000, 0.9)
@@ -90,7 +92,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       }
     } catch (error) {
       console.error("Failed to upload images:", error)
-      alert("画像のアップロードに失敗しました")
+      showToast("画像のアップロードに失敗しました", "error")
     } finally {
       setIsUploading(false)
     }
@@ -115,13 +117,13 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       await loadData()
     } catch (error) {
       console.error("Failed to delete image:", error)
-      alert("画像の削除に失敗しました")
+      showToast("画像の削除に失敗しました", "error")
     }
   }
 
   const handleAddFromUrl = async () => {
     if (!imageUrl.trim()) {
-      alert("画像URLを入力してください")
+      showToast("画像URLを入力してください", "warning")
       return
     }
 
@@ -152,10 +154,10 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       // リセット
       setImageUrl("")
       setShowUrlInput(false)
-      alert("URLから画像を追加しました")
+      showToast("URLから画像を追加しました", "success")
     } catch (error) {
       console.error("Failed to add image from URL:", error)
-      alert(`URLからの画像追加に失敗しました:\n${error instanceof Error ? error.message : '不明なエラー'}`)
+      showToast(`URLからの画像追加に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`, "error")
     } finally {
       setIsAddingFromUrl(false)
     }
@@ -177,10 +179,10 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
     try {
       await clearAllData()
       await loadData()
-      alert("全てのデータを削除しました")
+      showToast("全てのデータを削除しました", "success")
     } catch (error) {
       console.error("Failed to clear data:", error)
-      alert("データの削除に失敗しました")
+      showToast("データの削除に失敗しました", "error")
     }
   }
 

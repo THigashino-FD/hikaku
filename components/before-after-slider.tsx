@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
+import { useToast } from "@/components/ui/toast"
 
 interface BeforeAfterSliderProps {
   beforeImage: string
@@ -49,6 +50,7 @@ export function BeforeAfterSlider({
   initialComparisonMode = "slider",
   onSaveViewSettings,
 }: BeforeAfterSliderProps) {
+  const { showToast } = useToast()
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
   const parseNumber = (raw: string) => {
     const n = Number(raw)
@@ -302,7 +304,7 @@ export function BeforeAfterSlider({
         { scale: beforeScale, x: beforeX, y: beforeY },
         { scale: afterScale, x: afterX, y: afterY }
       )
-      alert("初期表示設定として保存しました")
+      showToast("初期表示設定として保存しました", "success")
     }
   }
 

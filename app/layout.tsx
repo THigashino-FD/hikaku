@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+import { ToastProvider } from "@/components/ui/toast"
 
 const geist = Geist({ subsets: ["latin"] })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${geist.className} ${geistMono.variable} antialiased`}>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )

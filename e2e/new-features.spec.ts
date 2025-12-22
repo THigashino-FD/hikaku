@@ -183,9 +183,10 @@ test.describe('新機能テスト', () => {
     // デフォルトCASEのセットアップを待つ
     await page.waitForTimeout(3000);
     
-    // CASE 01の編集ボタンをクリック
-    await page.getByRole('button', { name: /編集/ }).first().click();
-    await page.waitForTimeout(500);
+    // CASE 01の編集ボタンをクリック（CASE一覧セクション内）
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    await caseSection.getByRole('button', { name: /編集/ }).first().click();
+    await page.waitForTimeout(1500);
     
     // 初期スライダー位置の項目が表示されることを確認
     await expect(page.getByText('初期スライダー位置')).toBeVisible();
@@ -207,9 +208,10 @@ test.describe('新機能テスト', () => {
     // デフォルトCASEのセットアップを待つ
     await page.waitForTimeout(3000);
     
-    // CASE 01の編集ボタンをクリック
-    await page.getByRole('button', { name: /編集/ }).first().click();
-    await page.waitForTimeout(500);
+    // CASE 01の編集ボタンをクリック（CASE一覧セクション内）
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    await caseSection.getByRole('button', { name: /編集/ }).first().click();
+    await page.waitForTimeout(1500);
     
     // アニメーションを「なし」に変更
     await page.getByRole('radio', { name: /なし/ }).first().click();

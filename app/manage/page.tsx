@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { v4 as uuidv4 } from "uuid"
 import { generateShareUrl, type SharedCaseData } from "@/lib/share"
+import { useToast } from "@/components/ui/toast"
 
 export default function ManagePage() {
   const [cases, setCases] = useState<CaseRecord[]>([])
@@ -32,6 +33,7 @@ export default function ManagePage() {
   const [shareLink, setShareLink] = useState<string>("")
   const [shareError, setShareError] = useState<string>("")
   const [shareableStatus, setShareableStatus] = useState<Record<string, boolean>>({})
+  const { showToast } = useToast()
 
   const loadData = async () => {
     setIsLoading(true)
@@ -86,7 +88,7 @@ export default function ManagePage() {
       await loadData()
     } catch (error) {
       console.error("Failed to add case:", error)
-      alert("CASEの追加に失敗しました")
+      showToast("CASEの追加に失敗しました", "error")
     }
   }
 
@@ -101,7 +103,7 @@ export default function ManagePage() {
       setEditingCase(null)
     } catch (error) {
       console.error("Failed to update case:", error)
-      alert("CASEの更新に失敗しました")
+      showToast("CASEの更新に失敗しました", "error")
     }
   }
 
@@ -115,7 +117,7 @@ export default function ManagePage() {
       await loadData()
     } catch (error) {
       console.error("Failed to delete case:", error)
-      alert("CASEの削除に失敗しました")
+      showToast("CASEの削除に失敗しました", "error")
     }
   }
 
@@ -134,7 +136,7 @@ export default function ManagePage() {
       await loadData()
     } catch (error) {
       console.error("Failed to duplicate case:", error)
-      alert("CASEの複製に失敗しました")
+      showToast("CASEの複製に失敗しました", "error")
     }
   }
 
@@ -151,7 +153,7 @@ export default function ManagePage() {
       await loadData()
     } catch (error) {
       console.error("Failed to reorder cases:", error)
-      alert("並び替えに失敗しました")
+      showToast("並び替えに失敗しました", "error")
     }
   }
 
@@ -168,7 +170,7 @@ export default function ManagePage() {
       await loadData()
     } catch (error) {
       console.error("Failed to reorder cases:", error)
-      alert("並び替えに失敗しました")
+      showToast("並び替えに失敗しました", "error")
     }
   }
 
@@ -221,9 +223,9 @@ export default function ManagePage() {
     if (!shareLink) return
     try {
       await navigator.clipboard.writeText(shareLink)
-      alert("共有リンクをコピーしました")
+      showToast("共有リンクをコピーしました", "success")
     } catch {
-      alert("コピーに失敗しました")
+      showToast("コピーに失敗しました", "error")
     }
   }
 
