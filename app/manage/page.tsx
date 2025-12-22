@@ -464,8 +464,8 @@ export default function ManagePage() {
 
         {/* Quick Actions */}
         <section className="flex flex-wrap gap-3">
-          <Button onClick={handleAddCase} className="gap-2">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <Button onClick={handleAddCase} size="lg" className="gap-2 font-semibold">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             新規CASE追加
@@ -473,6 +473,7 @@ export default function ManagePage() {
           <Button
             onClick={() => setShowImageLibrary(true)}
             variant="outline"
+            size="lg"
             className="gap-2"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
