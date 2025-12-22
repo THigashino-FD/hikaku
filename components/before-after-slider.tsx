@@ -137,20 +137,20 @@ export function BeforeAfterSlider({
 
     let startTime: number | null = null
 
-    // 初期位置を基準に、左右に18%ずつ動く
+    // 初期位置を基準に、左右に30%ずつ動く（より大きく）
     const basePos = initialSliderPosition
-    const rightPos = Math.min(basePos + 18, 100)
-    const leftPos = Math.max(basePos - 18, 0)
+    const rightPos = Math.min(basePos + 30, 100)
+    const leftPos = Math.max(basePos - 30, 0)
 
-    // タイムライン（ms）: "止まる"を挟んで、Before/Afterが切り替わることを認知しやすくする
+    // タイムライン（ms）: "止まる"を挟んで、Before/Afterが切り替わることを認知しやすくする（よりゆっくり）
     const keyframes: Array<{ t: number; pos: number }> = [
       { t: 0, pos: basePos },
-      { t: 200, pos: basePos },
-      { t: 800, pos: rightPos },
-      { t: 1000, pos: rightPos },
-      { t: 1600, pos: leftPos },
-      { t: 1800, pos: leftPos },
-      { t: 2400, pos: basePos },
+      { t: 400, pos: basePos },
+      { t: 1800, pos: rightPos },
+      { t: 2200, pos: rightPos },
+      { t: 3600, pos: leftPos },
+      { t: 4000, pos: leftPos },
+      { t: 6000, pos: basePos },
     ]
     const totalDuration = keyframes[keyframes.length - 1]!.t
 

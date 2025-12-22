@@ -29,8 +29,8 @@ test.describe('新機能テスト', () => {
     const slider = page.locator('[class*="cursor-ew-resize"]').first();
     await expect(slider).toBeVisible();
     
-    // アニメーション完了待ち（約4秒 + バッファ）
-    await page.waitForTimeout(4500);
+    // アニメーション完了待ち（約6秒 + バッファ）
+    await page.waitForTimeout(7000);
     
     // スライダーが50%付近にあることを確認（アニメーション完了後）
     const sliderPosition = await slider.evaluate((el) => {
@@ -90,7 +90,7 @@ test.describe('新機能テスト', () => {
     });
     
     // アニメーション時間分待つ（CASE 01のデモが終わっても、CASE 02は動かない）
-    await page.waitForTimeout(4500);
+    await page.waitForTimeout(7000);
     
     // 位置が変わっていないことを確認（アニメーションなし）
     const finalPosition = await case02Slider.evaluate((el) => {
@@ -242,8 +242,8 @@ test.describe('新機能テスト', () => {
     await page.goto('/');
     
     // 画像読み込み完了を待つ（アニメーションが開始される前に、画像が読み込まれる必要がある）
-    // デフォルトでアニメーションが4秒なので、5秒待てばアニメーションが完了しているはず
-    await page.waitForTimeout(5000);
+    // デフォルトでアニメーションが6秒なので、7秒待てばアニメーションが完了しているはず
+    await page.waitForTimeout(7000);
     
     // アニメーション完了後、または「なし」設定の場合は初期位置に留まる
     const viewerSlider = page.locator('[class*="cursor-ew-resize"]').first();
@@ -273,22 +273,26 @@ test.describe('新機能テスト', () => {
     
     // 画像が読み込まれるまで待つ（WebKitは特に時間がかかる）
     // アニメーションは画像読み込み後に開始される
-    const imageLoadWait = browserName === 'webkit' ? 1500 : 500;
+    const imageLoadWait = browserName === 'webkit' ? 2000 : 1000;
     await page.waitForTimeout(imageLoadWait);
     
-    // アニメーション開始直後の位置を取得
+    // アニメーション開始直後の位置を取得（初期位置50%で0.4秒停止後、動き始める前）
+    // アニメーションは0ms:50% → 400ms:50% → 1800ms:右側へ移動開始
+    // なので、500ms時点で位置を取得すれば初期位置（50%）のはず
+    await page.waitForTimeout(500);
     const initialPosition = await viewerSlider.evaluate((el) => el.style.left);
     
-    // 1.5秒後の位置を取得（アニメーション中）
+    // アニメーションが動き始めた後の位置を取得（1800ms以降、右側へ移動中）
+    // 2000ms時点で取得すれば、右側へ移動しているはず
     await page.waitForTimeout(1500);
     const midPosition = await viewerSlider.evaluate((el) => el.style.left);
     
     // 位置が変化していることを確認（アニメーションが動いている）
     expect(initialPosition).not.toBe(midPosition);
     
-    // アニメーション完了後（4秒+α）、初期位置（50%）に戻る
+    // アニメーション完了後（6秒+α）、初期位置（50%）に戻る
     // 浮動小数点の精度により完全に50%にならない場合があるため、49%〜51%の範囲を許容
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
     const finalPosition = await viewerSlider.evaluate((el) => {
       const left = el.style.left;
       const match = left.match(/([\d.]+)%/);
