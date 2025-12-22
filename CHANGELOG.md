@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [0.1.1] - 2024-12-22
 
+### Upgraded
+- Next.js 16.0.10 → 16.1.0
+  - パフォーマンス改善とセキュリティ向上
+  - ビルド確認: 正常に完了
+  - 開発サーバー確認: 正常に起動
+  - 互換性: すべての機能が正常に動作
+
 ### Performance Improvements
 - 起動時間の最適化
   - WebKit判定を共通化 (`lib/browser.ts`)
