@@ -9,7 +9,6 @@ export interface SharedCaseData {
   afterUrl: string
   initialSliderPosition: number
   animationType: 'none' | 'demo'
-  comparisonMode?: 'slider' | 'sideBySide'
   view: {
     before: {
       scale: number

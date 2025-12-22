@@ -50,6 +50,7 @@ export function ImagePicker({ images, selectedImageId, onSelect, label }: ImageP
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="relative h-32 w-full overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/50 transition-colors hover:border-primary hover:bg-muted"
+        aria-label="画像を選択"
       >
         {selectedImage && imageUrls.get(selectedImage.id) ? (
           <>

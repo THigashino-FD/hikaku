@@ -27,7 +27,7 @@ async function fileToImage(file: File): Promise<HTMLImageElement> {
  * @param file 元画像ファイル
  * @param maxDimension 長辺の最大サイズ（デフォルト2000px）
  * @param quality 画質（0-1、デフォルト0.9）
- * @returns 最適化されたBlob、元の幅/高さ、リサイズ後の幅/高さ
+ * @returns 最適化されたBlob、リサイズ後の幅/高さ
  */
 export async function resizeImage(
   file: File,
@@ -35,18 +35,14 @@ export async function resizeImage(
   quality: number = 0.9
 ): Promise<{
   blob: Blob;
-  originalWidth: number;
-  originalHeight: number;
   width: number;
   height: number;
 }> {
   const img = await fileToImage(file);
-  const originalWidth = img.width;
-  const originalHeight = img.height;
 
   // リサイズが必要かチェック
-  let width = originalWidth;
-  let height = originalHeight;
+  let width = img.width;
+  let height = img.height;
 
   if (width > maxDimension || height > maxDimension) {
     if (width > height) {
@@ -80,8 +76,6 @@ export async function resizeImage(
 
         resolve({
           blob,
-          originalWidth,
-          originalHeight,
           width,
           height,
         });
@@ -103,26 +97,6 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-}
-
-/**
- * 画像の次元を取得
- */
-export async function getImageDimensions(
-  file: File
-): Promise<{ width: number; height: number }> {
-  const img = await fileToImage(file);
-  return {
-    width: img.width,
-    height: img.height,
-  };
-}
-
-/**
- * 画像ファイルかどうかをチェック
- */
-export function isImageFile(file: File): boolean {
-  return file.type.startsWith('image/');
 }
 
 /**
@@ -180,8 +154,6 @@ export async function fetchAndResizeImage(
   quality: number = 0.9
 ): Promise<{
   blob: Blob;
-  originalWidth: number;
-  originalHeight: number;
   width: number;
   height: number;
   type: string;

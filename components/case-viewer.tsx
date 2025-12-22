@@ -136,8 +136,6 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
         defaultAfterY={caseRecord.view.after.y}
         initialSliderPosition={caseRecord.initialSliderPosition}
         animationType={caseRecord.animationType}
-        shareTitle={caseRecord.title}
-        shareDescription={caseRecord.description}
         onSaveViewSettings={(beforeSettings, afterSettings) =>
           onSaveViewSettings(caseRecord.id, beforeSettings, afterSettings)
         }

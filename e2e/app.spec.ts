@@ -11,24 +11,23 @@ test.describe('初期表示とデフォルトCASE', () => {
   test('トップページが正常に表示される', async ({ page }) => {
     await page.goto('/');
     
-    // ヘッダーが表示される
-    await expect(page.getByText('RENOVATION REVIEW TOOL')).toBeVisible();
+    // ヘッダーが表示される（モバイルでは一部文言が非表示のため、主要文言のみ検証）
     await expect(page.getByText('改築ビフォー/アフター比較')).toBeVisible();
     
     // 管理ページボタンが表示される
-    await expect(page.getByRole('link', { name: '管理ページ' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '管理ページ', exact: true })).toBeVisible();
   });
 
   test('デフォルトCASEが3件作成される', async ({ page }) => {
     await page.goto('/');
     
     // デフォルトCASEのセットアップを待つ（最大10秒）
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
     
     // CASE 01, 02, 03が表示される
-    await expect(page.getByText('CASE 01')).toBeVisible();
-    await expect(page.getByText('CASE 02')).toBeVisible();
-    await expect(page.getByText('CASE 03')).toBeVisible();
+    await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('CASE 02')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('CASE 03')).toBeVisible({ timeout: 10000 });
     
     // スライダーが表示される
     const sliders = await page.locator('[class*="cursor-ew-resize"]').count();
@@ -39,10 +38,10 @@ test.describe('初期表示とデフォルトCASE', () => {
     await page.goto('/');
     
     // 管理ページボタンをクリック
-    await page.getByRole('link', { name: '管理ページ' }).click();
+    await page.getByRole('link', { name: '管理ページ', exact: true }).click();
     
     // 管理ページが表示される
-    await expect(page.getByText('管理ページ')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '管理ページ' })).toBeVisible();
     await expect(page.getByRole('button', { name: '新規CASE追加' })).toBeVisible();
     await expect(page.getByRole('button', { name: /画像ライブラリ/ })).toBeVisible();
   });
@@ -114,8 +113,12 @@ test.describe('CASE管理', () => {
   });
 
   test('CASEを削除できる', async ({ page }) => {
+    // デフォルトCASEが表示されるまで待つ
+    await expect(page.getByText('CASE 01')).toBeVisible();
+    
     // 削除前のCASE数を確認
     const initialCount = await page.getByRole('button', { name: '編集' }).count();
+    expect(initialCount).toBeGreaterThan(0); // 少なくとも1つはCASEがあることを確認
     
     // 最初のCASEの削除ボタンをクリック
     page.once('dialog', dialog => {
@@ -124,8 +127,8 @@ test.describe('CASE管理', () => {
     });
     await page.getByRole('button', { name: '削除' }).first().click();
     
-    // CASEが1つ減っている
-    await page.waitForTimeout(1000);
+    // CASEが1つ減っている（WebKitでは削除処理に時間がかかる場合がある）
+    await page.waitForTimeout(2000);
     const newCount = await page.getByRole('button', { name: '編集' }).count();
     expect(newCount).toBe(initialCount - 1);
   });
@@ -212,18 +215,21 @@ test.describe('データ永続性', () => {
     });
     
     await page.goto('/manage');
-    await page.waitForTimeout(3000);
+    // WebKitでは初期画像登録に時間がかかることがあるため、明示的にデフォルトCASEの表示を待つ
+    await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
+    await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 15000 });
     
     // 初期状態のCASE数を確認（デフォルト3件）
-    const initialCount = await page.locator('div.font-semibold').count();
+    const initialCount = await page.locator('div.font-semibold').filter({ hasText: /^CASE/ }).count();
     expect(initialCount).toBe(3);
     
     // 新規CASE追加
     await page.getByRole('button', { name: '新規CASE追加' }).click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
+    await expect(page.getByText('CASE 4')).toBeVisible({ timeout: 15000 });
     
     // CASEが1つ増えている
-    const afterAddCount = await page.locator('div.font-semibold').count();
+    const afterAddCount = await page.locator('div.font-semibold').filter({ hasText: /^CASE/ }).count();
     expect(afterAddCount).toBe(4);
     
     // トップページに移動（IndexedDBの永続性をテスト）

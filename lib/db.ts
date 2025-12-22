@@ -5,7 +5,7 @@ export interface ImageRecord {
   name: string;
   type: string;
   size: number;
-  blob: Blob;
+  blob: Blob | ArrayBuffer; // WebKitでの不具合回避のためArrayBufferを許容
   width: number;
   height: number;
   sourceUrl?: string; // URL経由で取り込んだ画像の元URL（共有用）
@@ -62,12 +62,56 @@ const DB_VERSION = 2; // 初期位置・アニメ種別追加のため更新
 
 let dbInstance: IDBPDatabase<HikakuDB> | null = null;
 
+// WebKitでのIndexedDBの問題を回避するため、キャッシュを無効化する関数
+function isWebKit(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return ua.includes('webkit') && !ua.includes('chrome');
+}
+
+// WebKit環境では、データベース接続を強制的に再作成する
+export function resetDBInstance(): void {
+  if (isWebKit()) {
+    dbInstance = null;
+  }
+}
+
 export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
-  if (dbInstance) {
+  // WebKit環境では、キャッシュされたインスタンスを使用しない（問題回避のため）
+  if (dbInstance && !isWebKit()) {
     return dbInstance;
   }
-
-  dbInstance = await openDB<HikakuDB>(DB_NAME, DB_VERSION, {
+  
+  // WebKit環境では、既存のインスタンスをクリア
+  if (isWebKit() && dbInstance) {
+    dbInstance.close();
+    dbInstance = null;
+  }
+  
+  // WebKitでのIndexedDBの準備を確認
+  if (typeof window !== 'undefined' && 'indexedDB' in window) {
+    try {
+      // IndexedDBが利用可能か確認（プライベートブラウジングモードのチェック）
+      const testDB = indexedDB.open('__test_db__');
+      testDB.onerror = () => {
+        indexedDB.deleteDatabase('__test_db__');
+      };
+      testDB.onsuccess = () => {
+        indexedDB.deleteDatabase('__test_db__');
+      };
+    } catch (e) {
+      // IndexedDBが利用できない場合
+      throw new Error('IndexedDB is not available in this browser');
+    }
+  }
+  
+  try {
+    // WebKitでのタイミング問題を回避するため、少し待機
+    if (isWebKit()) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    dbInstance = await openDB<HikakuDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion, newVersion, transaction) {
       // images store
       if (!db.objectStoreNames.contains('images')) {
@@ -119,29 +163,55 @@ export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
       }
     },
   });
-
   return dbInstance;
+  } catch (error) {
+    throw error;
+  }
 }
 
 // ========== Images ==========
 export async function getAllImages(): Promise<ImageRecord[]> {
   const db = await getDB();
-  return db.getAllFromIndex('images', 'by-createdAt');
+  const images = await db.getAllFromIndex('images', 'by-createdAt');
+  
+  // ArrayBufferをBlobに戻す
+  return images.map(img => ({
+    ...img,
+    blob: img.blob instanceof ArrayBuffer ? new Blob([img.blob], { type: img.type }) : img.blob
+  }));
 }
 
 export async function getImageById(id: string): Promise<ImageRecord | undefined> {
   const db = await getDB();
-  return db.get('images', id);
+  const img = await db.get('images', id);
+  if (!img) return undefined;
+  
+  // ArrayBufferをBlobに戻す
+  return {
+    ...img,
+    blob: img.blob instanceof ArrayBuffer ? new Blob([img.blob], { type: img.type }) : img.blob
+  };
 }
 
 export async function addImage(image: ImageRecord): Promise<void> {
   const db = await getDB();
-  await db.add('images', image);
+  
+  // WebKitでの不具合回避のため、BlobをArrayBufferに変換
+  if (image.blob instanceof Blob && isWebKit()) {
+    const arrayBuffer = await image.blob.arrayBuffer();
+    image.blob = arrayBuffer;
+  }
+  
+  const tx = db.transaction('images', 'readwrite');
+  await tx.store.add(image);
+  await tx.done; // WebKitでのトランザクション完了を明示的に待つ
 }
 
 export async function deleteImage(id: string): Promise<void> {
   const db = await getDB();
-  await db.delete('images', id);
+  const tx = db.transaction('images', 'readwrite');
+  await tx.store.delete(id);
+  await tx.done; // WebKitでのトランザクション完了を明示的に待つ
 }
 
 export async function getImagesUsedByCases(): Promise<Map<string, string[]>> {
@@ -181,18 +251,24 @@ export async function getCaseById(id: string): Promise<CaseRecord | undefined> {
 
 export async function addCase(caseRecord: CaseRecord): Promise<void> {
   const db = await getDB();
-  await db.add('cases', caseRecord);
+  const tx = db.transaction('cases', 'readwrite');
+  await tx.store.add(caseRecord);
+  await tx.done; // WebKitでのトランザクション完了を明示的に待つ
 }
 
 export async function updateCase(caseRecord: CaseRecord): Promise<void> {
   const db = await getDB();
   caseRecord.updatedAt = Date.now();
-  await db.put('cases', caseRecord);
+  const tx = db.transaction('cases', 'readwrite');
+  await tx.store.put(caseRecord);
+  await tx.done; // WebKitでのトランザクション完了を明示的に待つ
 }
 
 export async function deleteCase(id: string): Promise<void> {
   const db = await getDB();
-  await db.delete('cases', id);
+  const tx = db.transaction('cases', 'readwrite');
+  await tx.store.delete(id);
+  await tx.done; // WebKitでのトランザクション完了を明示的に待つ
 }
 
 export async function reorderCases(caseIds: string[]): Promise<void> {
@@ -219,7 +295,9 @@ export async function getAppConfig<T = unknown>(key: string): Promise<T | undefi
 
 export async function setAppConfig<T = unknown>(key: string, value: T): Promise<void> {
   const db = await getDB();
-  await db.put('app', { key, value });
+  const tx = db.transaction('app', 'readwrite');
+  await tx.store.put({ key, value });
+  await tx.done; // WebKitでのトランザクション完了を明示的に待つ
 }
 
 // ========== Utilities ==========

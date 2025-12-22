@@ -23,8 +23,6 @@ interface BeforeAfterSliderProps {
   initialSliderPosition?: number // 初期スライダー位置（0-100%）
   animationType?: 'none' | 'demo' // アニメーション種別
   initialComparisonMode?: ComparisonMode // 比較モードの初期値
-  shareTitle?: string
-  shareDescription?: string
   onSaveViewSettings?: (
     beforeSettings: { scale: number; x: number; y: number },
     afterSettings: { scale: number; x: number; y: number }
@@ -147,12 +145,12 @@ export function BeforeAfterSlider({
     // タイムライン（ms）: "止まる"を挟んで、Before/Afterが切り替わることを認知しやすくする
     const keyframes: Array<{ t: number; pos: number }> = [
       { t: 0, pos: basePos },
-      { t: 300, pos: basePos },
-      { t: 1400, pos: rightPos },
-      { t: 1700, pos: rightPos },
-      { t: 2800, pos: leftPos },
-      { t: 3100, pos: leftPos },
-      { t: 4000, pos: basePos },
+      { t: 200, pos: basePos },
+      { t: 800, pos: rightPos },
+      { t: 1000, pos: rightPos },
+      { t: 1600, pos: leftPos },
+      { t: 1800, pos: leftPos },
+      { t: 2400, pos: basePos },
     ]
     const totalDuration = keyframes[keyframes.length - 1]!.t
 
@@ -308,17 +306,17 @@ export function BeforeAfterSlider({
     }
   }
 
-  // 共有リンク生成は buildShareLink / copyShareLink に統合
-
   return (
-    <div ref={fullscreenRef} className={cn("space-y-4", isFullscreen && "fixed inset-0 z-50 bg-background p-6 overflow-auto")}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-2">
+    <div ref={fullscreenRef} className={cn("space-y-4 max-w-full", isFullscreen && "fixed inset-0 z-50 bg-background p-6 overflow-auto")}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPanelMode(panelMode === "adjust" ? "none" : "adjust")}
             className="gap-2 bg-transparent"
+            aria-label={panelMode === "adjust" ? "調整を閉じる" : "調整"}
+            aria-pressed={panelMode === "adjust"}
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -328,7 +326,8 @@ export function BeforeAfterSlider({
                 d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
               />
             </svg>
-            {panelMode === "adjust" ? "調整を閉じる" : "調整"}
+            <span className="hidden sm:inline">{panelMode === "adjust" ? "調整を閉じる" : "調整"}</span>
+            <span className="sm:hidden">調整</span>
           </Button>
 
           {/* 比較モード切替 */}
@@ -338,28 +337,30 @@ export function BeforeAfterSlider({
               size="sm"
               onClick={() => setComparisonMode("slider")}
               className="h-7 gap-1.5 px-2"
+              aria-label="スライダー"
             >
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01" />
               </svg>
-              スライダー
+              <span className="hidden sm:inline">スライダー</span>
             </Button>
             <Button
               variant={comparisonMode === "sideBySide" ? "default" : "ghost"}
               size="sm"
               onClick={() => setComparisonMode("sideBySide")}
               className="h-7 gap-1.5 px-2"
+              aria-label="左右比較"
             >
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v16M9 4l-6 6m6-6l6 6" />
               </svg>
-              左右比較
+              <span className="hidden sm:inline">左右比較</span>
             </Button>
           </div>
         </div>
 
         {/* フルスクリーンボタン */}
-        <Button variant="outline" size="sm" onClick={toggleFullscreen} className="gap-2 bg-transparent">
+        <Button variant="outline" size="sm" onClick={toggleFullscreen} className="gap-2 bg-transparent w-full sm:w-auto">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {isFullscreen ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -372,9 +373,9 @@ export function BeforeAfterSlider({
       </div>
 
       {panelMode !== "none" && (
-        <div className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
           {panelMode === "adjust" && (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
             {/* Before Image Controls */}
             <div className="space-y-4">
               <h4 className="font-semibold text-foreground">改築前の画像調整</h4>

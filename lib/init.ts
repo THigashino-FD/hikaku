@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { getAllCases, addCase, addImage, getAppConfig, setAppConfig, CaseRecord, ImageRecord } from './db';
+import { getDB, getAllCases, addCase, addImage, getAppConfig, setAppConfig, CaseRecord, ImageRecord } from './db';
 
 /**
  * 画像URLからBlobを取得
@@ -13,11 +13,16 @@ async function fetchImageAsBlob(url: string): Promise<Blob> {
   // 絶対URLに変換
   const absoluteUrl = new URL(url, window.location.origin).href;
   
-  const response = await fetch(absoluteUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${url} (${response.status})`);
+  try {
+    const response = await fetch(absoluteUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${url} (${response.status})`);
+    }
+    return await response.blob();
+  } catch (error) {
+    console.error(`fetchImageAsBlob error: ${url}`, error);
+    throw error;
   }
-  return await response.blob();
 }
 
 /**
@@ -26,19 +31,26 @@ async function fetchImageAsBlob(url: string): Promise<Blob> {
 async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const url = URL.createObjectURL(blob);
+    let url: string | undefined;
+    
+    try {
+      url = URL.createObjectURL(blob);
+    } catch (e) {
+      reject(new Error('Failed to create object URL'));
+      return;
+    }
 
     img.onload = () => {
       resolve({ width: img.width, height: img.height });
-      URL.revokeObjectURL(url);
+      if (url) URL.revokeObjectURL(url);
     };
 
     img.onerror = () => {
-      URL.revokeObjectURL(url);
+      if (url) URL.revokeObjectURL(url);
       reject(new Error('Failed to load image'));
     };
 
-    img.src = url;
+    img.src = url!;
   });
 }
 
@@ -90,27 +102,57 @@ export async function setupDefaultCases(): Promise<void> {
       return;
     }
 
-    // 既存のCASEがあるかチェック
-    const existingCases = await getAllCases();
+    // 既存のCASEがあるかチェック（WebKitでのタイミング問題を回避するため、リトライ付き）
+    let existingCases: CaseRecord[] = [];
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        existingCases = await getAllCases();
+        break;
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          console.error('[INIT] Failed to get existing cases after retries:', error);
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
+      }
+    }
+    
     if (existingCases.length > 0) {
       console.log('Cases already exist, skipping default setup');
       await setAppConfig('defaultCasesSetup', true);
+      // WebKitでのトランザクション完了を確実にするため、少し待機
+      await new Promise(resolve => setTimeout(resolve, 100));
       return;
     }
 
     console.log('Setting up default cases...');
 
-    // CASE 01の画像を登録
-    const beforeImage1Id = await setupDefaultImage('/samples/case-01-before.png', 'case-01-before.png');
-    const afterImage1Id = await setupDefaultImage('/samples/case-01-after.jpg', 'case-01-after.jpg');
+    let beforeImage1Id: string | undefined;
+    let afterImage1Id: string | undefined;
+    let beforeImage2Id: string | undefined;
+    let afterImage2Id: string | undefined;
+    let beforeImage3Id: string | undefined;
+    let afterImage3Id: string | undefined;
 
-    // CASE 02の画像を登録
-    const beforeImage2Id = await setupDefaultImage('/samples/case-02-before.png', 'case-02-before.png');
-    const afterImage2Id = await setupDefaultImage('/samples/case-02-after.jpg', 'case-02-after.jpg');
+    const safeSetup = async (path: string, name: string) => {
+      try {
+        return await setupDefaultImage(path, name);
+      } catch (e) {
+        console.error(`[INIT] Failed to setup ${path}:`, e);
+        return undefined;
+      }
+    };
 
-    // CASE 03の画像を登録
-    const beforeImage3Id = await setupDefaultImage('/samples/case-03-before.png', 'case-03-before.png');
-    const afterImage3Id = await setupDefaultImage('/samples/case-03-after.png', 'case-03-after.png');
+    beforeImage1Id = await safeSetup('/samples/case-01-before.png', 'case-01-before.png');
+    afterImage1Id = await safeSetup('/samples/case-01-after.jpg', 'case-01-after.jpg');
+    beforeImage2Id = await safeSetup('/samples/case-02-before.png', 'case-02-before.png');
+    afterImage2Id = await safeSetup('/samples/case-02-after.jpg', 'case-02-after.jpg');
+    beforeImage3Id = await safeSetup('/samples/case-03-before.png', 'case-03-before.png');
+    afterImage3Id = await safeSetup('/samples/case-03-after.png', 'case-03-after.png');
 
     // CASE 01を作成
     const case1: CaseRecord = {
@@ -125,7 +167,7 @@ export async function setupDefaultCases(): Promise<void> {
         after: { scale: 100, x: 0, y: 0 },
       },
       initialSliderPosition: 50,
-      animationType: 'demo', // CASE 01はデモアニメーション
+      animationType: 'demo',
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -166,13 +208,23 @@ export async function setupDefaultCases(): Promise<void> {
       updatedAt: Date.now(),
     };
 
-    // CASEを保存
-    await addCase(case1);
-    await addCase(case2);
-    await addCase(case3);
+    // CASEを保存（WebKitでのトランザクション完了を確実にするため、検証付きで順次実行）
+    const saveAndVerify = async (c: CaseRecord) => {
+      await addCase(c);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const all = await getAllCases();
+      if (!all.find(item => item.id === c.id)) {
+        throw new Error(`Failed to verify case save: ${c.title}`);
+      }
+    };
+
+    await saveAndVerify(case1);
+    await saveAndVerify(case2);
+    await saveAndVerify(case3);
 
     // セットアップ完了フラグを保存
     await setAppConfig('defaultCasesSetup', true);
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     console.log('Default cases setup completed');
   } catch (error) {
@@ -185,11 +237,62 @@ export async function setupDefaultCases(): Promise<void> {
  * 初期化チェック（アプリ起動時に呼び出す）
  */
 export async function initializeApp(): Promise<void> {
+  // WebKitでのIndexedDBの準備を待つ
+  if (typeof window !== 'undefined') {
+    try {
+      if (!('indexedDB' in window)) {
+        console.error('[INIT] IndexedDB is not available');
+        return;
+      }
+      
+      let dbReady = false;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (!dbReady && retryCount < maxRetries) {
+        try {
+          await getDB();
+          dbReady = true;
+        } catch (dbError) {
+          retryCount++;
+          if (retryCount >= maxRetries) throw dbError;
+          await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+        }
+      }
+    } catch (dbError) {
+      console.error('[INIT] Failed to initialize database:', dbError);
+    }
+  }
+  
   try {
     await setupDefaultCases();
   } catch (error) {
     console.error('Failed to initialize app:', error);
-    // エラーが発生してもアプリは起動できるようにする
+    
+    // WebKitでのIndexedDBエラーの場合、リトライ
+    const isIndexedDBError = error instanceof Error && (
+      error.message.includes('IndexedDB') || 
+      error.message.includes('database') ||
+      error.name === 'UnknownError' ||
+      error.name === 'QuotaExceededError' ||
+      error.message.includes('quota') ||
+      error.message.includes('Blob')
+    );
+    
+    if (isIndexedDBError) {
+      console.log('[INIT] IndexedDB error detected, retrying after 1000ms...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        const { resetDBInstance } = await import('./db');
+        resetDBInstance();
+        await setupDefaultCases();
+        console.log('[INIT] Retry successful');
+        return;
+      } catch (retryError) {
+        console.error('[INIT] Retry also failed:', retryError);
+      }
+    }
+    
+    console.warn('[INIT] Continuing despite initialization error');
   }
 }
-

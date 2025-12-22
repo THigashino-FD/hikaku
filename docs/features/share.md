@@ -59,7 +59,6 @@ https://your-domain/#share=BASE64_ENCODED_DATA
   afterUrl: string // After画像のURL（HTTPS必須）
   initialSliderPosition: number // 初期スライダー位置（0-100%）
   animationType: 'none' | 'demo' // アニメーション種別
-  comparisonMode?: 'slider' | 'sideBySide' // 比較モード
   view: {
     before: { scale: number; x: number; y: number }
     after: { scale: number; x: number; y: number }

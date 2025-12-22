@@ -32,6 +32,9 @@ export default function Home() {
       // 初回起動時にデフォルトCASEをセットアップ
       await initializeApp()
       
+      // 初期化後、少し待ってからCASEを取得（WebKitでのタイミング問題を回避）
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
       const casesData = await getAllCases()
       setCases(casesData)
     } catch (error) {
@@ -187,7 +190,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background overflow-x-hidden">
       {/* Top bar - Dark Teal Background per LP reference */}
       <header className="sticky top-0 z-40 bg-primary py-4 shadow-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
@@ -274,8 +277,6 @@ export default function Home() {
                 defaultAfterY={sharedCase.view.after.y}
                 initialSliderPosition={sharedCase.initialSliderPosition}
                 animationType={sharedCase.animationType}
-                shareTitle={sharedCase.title}
-                shareDescription={sharedCase.description}
               />
               <div className="mt-3 text-xs text-muted-foreground">
                 Google Drive直リンクの注意: 共有ページURLは画像として取得できず失敗することがあります。画像として直接アクセスできるURLを指定してください。
