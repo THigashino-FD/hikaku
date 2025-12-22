@@ -535,14 +535,36 @@ function ImageCard({ image, usage, onDelete }: ImageCardProps) {
           </div>
         )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onDelete(image.id)}
-          className="w-full text-destructive"
-        >
-          削除
-        </Button>
+        {usage.length > 0 ? (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="w-full cursor-not-allowed opacity-50"
+            >
+              <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              削除不可（使用中）
+            </Button>
+            <p className="text-[10px] text-muted-foreground">
+              ※ この画像を削除するには、使用しているCASEから割り当てを解除してください
+            </p>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDelete(image.id)}
+            className="w-full text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            削除
+          </Button>
+        )}
       </div>
     </div>
 
