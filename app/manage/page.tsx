@@ -49,12 +49,16 @@ export default function ManagePage() {
       setImages(imagesData)
 
       // 各CASEが共有可能かを判定
-      const statusMap: Record<string, boolean> = {}
-      for (const c of casesData) {
-        const beforeImage = c.beforeImageId ? await getImageById(c.beforeImageId) : null
-        const afterImage = c.afterImageId ? await getImageById(c.afterImageId) : null
-        statusMap[c.id] = !!(beforeImage?.sourceUrl && afterImage?.sourceUrl)
-      }
+      const statusEntries = await Promise.all(
+        casesData.map(async (c) => {
+          const [beforeImage, afterImage] = await Promise.all([
+            c.beforeImageId ? getImageById(c.beforeImageId) : Promise.resolve(null),
+            c.afterImageId ? getImageById(c.afterImageId) : Promise.resolve(null),
+          ])
+          return [c.id, !!(beforeImage?.sourceUrl && afterImage?.sourceUrl)] as const
+        })
+      )
+      const statusMap: Record<string, boolean> = Object.fromEntries(statusEntries)
       setShareableStatus(statusMap)
     } catch (error) {
       console.error("Failed to load data:", error)

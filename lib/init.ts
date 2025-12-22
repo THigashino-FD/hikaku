@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDB, getAllCases, addCase, addImage, getAppConfig, setAppConfig, CaseRecord, ImageRecord } from './db';
+import { sleep } from "./browser";
 
 /**
  * 画像URLからBlobを取得
@@ -237,6 +238,13 @@ export async function setupDefaultCases(): Promise<void> {
  * 初期化チェック（アプリ起動時に呼び出す）
  */
 export async function initializeApp(): Promise<void> {
+  // 同一セッション内の多重実行を避ける（ページ遷移/再描画/保存後の再読み込みなど）
+  if (initializeAppState.done) return;
+  if (initializeAppState.inFlight) return initializeAppState.inFlight;
+
+  initializeAppState.inFlight = (async () => {
+    let setupOk = false;
+
   // WebKitでのIndexedDBの準備を待つ
   if (typeof window !== 'undefined') {
     try {
@@ -256,7 +264,7 @@ export async function initializeApp(): Promise<void> {
         } catch (dbError) {
           retryCount++;
           if (retryCount >= maxRetries) throw dbError;
-          await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+          await sleep(200 * retryCount);
         }
       }
     } catch (dbError) {
@@ -266,6 +274,7 @@ export async function initializeApp(): Promise<void> {
   
   try {
     await setupDefaultCases();
+    setupOk = true;
   } catch (error) {
     console.error('Failed to initialize app:', error);
     
@@ -281,13 +290,13 @@ export async function initializeApp(): Promise<void> {
     
     if (isIndexedDBError) {
       console.log('[INIT] IndexedDB error detected, retrying after 1000ms...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await sleep(1000);
       try {
         const { resetDBInstance } = await import('./db');
         resetDBInstance();
         await setupDefaultCases();
         console.log('[INIT] Retry successful');
-        return;
+        setupOk = true;
       } catch (retryError) {
         console.error('[INIT] Retry also failed:', retryError);
       }
@@ -295,4 +304,22 @@ export async function initializeApp(): Promise<void> {
     
     console.warn('[INIT] Continuing despite initialization error');
   }
+
+    // 初期化が成功した場合のみ「done」として固定し、失敗時は次回呼び出しで再試行できるようにする
+    if (setupOk) {
+      initializeAppState.done = true;
+    } else {
+      initializeAppState.inFlight = null;
+    }
+  })();
+
+  return initializeAppState.inFlight;
 }
+
+const initializeAppState: {
+  inFlight: Promise<void> | null;
+  done: boolean;
+} = {
+  inFlight: null,
+  done: false,
+};

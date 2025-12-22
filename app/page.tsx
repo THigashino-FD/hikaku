@@ -15,6 +15,7 @@ import {
   ImageRecord,
 } from "@/lib/db"
 import { initializeApp } from "@/lib/init"
+import { isWebKitBrowser, sleep } from "@/lib/browser"
 import { getSharedCaseFromUrl, convertGoogleDriveUrl, type SharedCaseData } from "@/lib/share"
 import { fetchAndResizeImage } from "@/lib/image-utils"
 import { v4 as uuidv4 } from "uuid"
@@ -26,16 +27,30 @@ export default function Home() {
   const [shareError, setShareError] = useState<string>("")
   const [isImportingShare, setIsImportingShare] = useState(false)
 
+  const getAllCasesWithRetry = async () => {
+    const maxRetries = isWebKitBrowser() ? 3 : 1
+    let lastError: unknown = null
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await getAllCases()
+      } catch (e) {
+        lastError = e
+        if (attempt < maxRetries - 1) {
+          await sleep(100 * (attempt + 1))
+        }
+      }
+    }
+    throw lastError
+  }
+
   const loadCases = async () => {
     setIsLoading(true)
     try {
       // 初回起動時にデフォルトCASEをセットアップ
       await initializeApp()
-      
-      // 初期化後、少し待ってからCASEを取得（WebKitでのタイミング問題を回避）
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      const casesData = await getAllCases()
+
+      // WebKit環境では、初期化直後のIndexedDB取得が不安定なことがあるため、取得側で最小限リトライする
+      const casesData = await getAllCasesWithRetry()
       setCases(casesData)
     } catch (error) {
       console.error("Failed to load cases:", error)
