@@ -1,4 +1,28 @@
 /**
+ * FileをImageオブジェクトとして読み込む
+ */
+async function fileToImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      if (!e.target?.result) {
+        reject(new Error('Failed to read file'));
+        return;
+      }
+      img.src = e.target.result as string;
+    };
+
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    reader.onerror = () => reject(new Error('Failed to read file'));
+
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
  * 画像をリサイズして最適化する
  * @param file 元画像ファイル
  * @param maxDimension 長辺の最大サイズ（デフォルト2000px）
@@ -16,78 +40,55 @@ export async function resizeImage(
   width: number;
   height: number;
 }> {
+  const img = await fileToImage(file);
+  const originalWidth = img.width;
+  const originalHeight = img.height;
+
+  // リサイズが必要かチェック
+  let width = originalWidth;
+  let height = originalHeight;
+
+  if (width > maxDimension || height > maxDimension) {
+    if (width > height) {
+      height = Math.round((height * maxDimension) / width);
+      width = maxDimension;
+    } else {
+      width = Math.round((width * maxDimension) / height);
+      height = maxDimension;
+    }
+  }
+
+  // Canvas にリサイズして描画
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Failed to get canvas context');
+  }
+
+  ctx.drawImage(img, 0, 0, width, height);
+
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      if (!e.target?.result) {
-        reject(new Error('Failed to read file'));
-        return;
-      }
-      img.src = e.target.result as string;
-    };
-
-    img.onload = () => {
-      const originalWidth = img.width;
-      const originalHeight = img.height;
-
-      // リサイズが必要かチェック
-      let width = originalWidth;
-      let height = originalHeight;
-
-      if (width > maxDimension || height > maxDimension) {
-        if (width > height) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        } else {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create blob'));
+          return;
         }
-      }
 
-      // Canvas にリサイズして描画
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
-
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('Failed to create blob'));
-            return;
-          }
-
-          resolve({
-            blob,
-            originalWidth,
-            originalHeight,
-            width,
-            height,
-          });
-        },
-        file.type,
-        quality
-      );
-    };
-
-    img.onerror = () => {
-      reject(new Error('Failed to load image'));
-    };
-
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'));
-    };
-
-    reader.readAsDataURL(file);
+        resolve({
+          blob,
+          originalWidth,
+          originalHeight,
+          width,
+          height,
+        });
+      },
+      file.type,
+      quality
+    );
   });
 }
 
@@ -110,35 +111,11 @@ export function formatFileSize(bytes: number): string {
 export async function getImageDimensions(
   file: File
 ): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      if (!e.target?.result) {
-        reject(new Error('Failed to read file'));
-        return;
-      }
-      img.src = e.target.result as string;
-    };
-
-    img.onload = () => {
-      resolve({
-        width: img.width,
-        height: img.height,
-      });
-    };
-
-    img.onerror = () => {
-      reject(new Error('Failed to load image'));
-    };
-
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'));
-    };
-
-    reader.readAsDataURL(file);
-  });
+  const img = await fileToImage(file);
+  return {
+    width: img.width,
+    height: img.height,
+  };
 }
 
 /**
@@ -154,5 +131,74 @@ export function isImageFile(file: File): boolean {
 export function isAllowedImageType(file: File): boolean {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
   return allowedTypes.includes(file.type);
+}
+
+/**
+ * URLから画像を取得してBlobとして返す
+ */
+export async function fetchImageFromUrl(url: string): Promise<Blob> {
+  try {
+    const response = await fetch(url, {
+      mode: 'cors',
+      credentials: 'omit',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`画像の取得に失敗しました (HTTP ${response.status}): ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    
+    // 画像形式の確認
+    if (!blob.type.startsWith('image/')) {
+      throw new Error(`取得したコンテンツは画像ではありません (Content-Type: ${blob.type}). Google Driveの共有ページURLではなく、画像として直接アクセスできるURLを使用してください。`);
+    }
+    
+    return blob;
+  } catch (error: unknown) {
+    // ネットワークエラー（CORS含む）の詳細化
+    if (error instanceof Error && error.message.includes('Failed to fetch')) {
+      throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）制約、またはネットワークエラーの可能性があります。Google Driveを使用している場合は、共有設定を「リンクを知っている全員」にして、直接ダウンロード用のURLを使用してください。');
+    }
+    throw error;
+  }
+}
+
+/**
+ * BlobをFileオブジェクトに変換
+ */
+export function blobToFile(blob: Blob, filename: string): File {
+  return new File([blob], filename, { type: blob.type });
+}
+
+/**
+ * URLから画像を取得して最適化（リサイズ）
+ */
+export async function fetchAndResizeImage(
+  url: string,
+  maxDimension: number = 2000,
+  quality: number = 0.9
+): Promise<{
+  blob: Blob;
+  originalWidth: number;
+  originalHeight: number;
+  width: number;
+  height: number;
+  type: string;
+}> {
+  // URLから画像を取得
+  const originalBlob = await fetchImageFromUrl(url);
+  
+  // BlobからFileを作成（resizeImage関数がFile型を期待しているため）
+  const filename = url.split('/').pop() || 'image.jpg';
+  const file = blobToFile(originalBlob, filename);
+  
+  // リサイズ処理
+  const result = await resizeImage(file, maxDimension, quality);
+  
+  return {
+    ...result,
+    type: file.type,
+  };
 }
 

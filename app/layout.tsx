@@ -3,31 +3,14 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
+const geist = Geist({ subsets: ["latin"] })
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
   title: "NEUTRAL COMPARE - FREEDOM ARCHITECTS",
   description:
     "設計レビュー向けのBefore/After比較ツール。スライダーで差分を確認し、拡大・位置合わせでディテールも精査できます。",
   generator: "v0.app",
-  icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
-  },
 }
 
 export default function RootLayout({
@@ -37,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${_geist.className} ${_geistMono.variable} antialiased`}>
+      <body className={`${geist.className} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>

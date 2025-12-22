@@ -166,8 +166,8 @@ test.describe('新機能テスト', () => {
     // デフォルトCASEのセットアップを待つ
     await page.waitForTimeout(3000);
     
-    // 調整パネルを開く
-    await page.getByRole('button', { name: /縮尺・位置を調整/ }).first().click();
+    // 調整パネルを開く（UI変更によりボタン文言は「調整」）
+    await page.getByRole('button', { name: /^調整$/ }).first().click();
     
     // 比較モード切替が表示される（最初のCASEのもの）
     await expect(page.getByRole('button', { name: /スライダー/ }).first()).toBeVisible();

@@ -14,8 +14,9 @@ import {
   revokeObjectURL,
   clearAllData,
 } from "@/lib/db"
-import { resizeImage, formatFileSize, isAllowedImageType } from "@/lib/image-utils"
+import { resizeImage, formatFileSize, isAllowedImageType, fetchAndResizeImage } from "@/lib/image-utils"
 import { v4 as uuidv4 } from "uuid"
+import { convertGoogleDriveUrl } from "@/lib/share"
 
 interface ImageLibraryProps {
   onClose: () => void
@@ -26,6 +27,10 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const [usageMap, setUsageMap] = useState<Map<string, string[]>>(new Map())
   const [isUploading, setIsUploading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showUrlInput, setShowUrlInput] = useState(false)
+  const [imageUrl, setImageUrl] = useState("")
+  const [isAddingFromUrl, setIsAddingFromUrl] = useState(false)
+  const [filterUrlOnly, setFilterUrlOnly] = useState(false) // URL画像のみフィルタ
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadData = async () => {
@@ -114,6 +119,48 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
     }
   }
 
+  const handleAddFromUrl = async () => {
+    if (!imageUrl.trim()) {
+      alert("画像URLを入力してください")
+      return
+    }
+
+    setIsAddingFromUrl(true)
+
+    try {
+      // Google DriveのURLを変換
+      const normalizedUrl = convertGoogleDriveUrl(imageUrl.trim())
+      
+      // URLから画像を取得してリサイズ
+      const { blob, width, height, type } = await fetchAndResizeImage(normalizedUrl, 2000, 0.9)
+
+      const imageRecord: ImageRecord = {
+        id: uuidv4(),
+        name: normalizedUrl.split('/').pop() || 'image-from-url.jpg',
+        type: type,
+        size: blob.size,
+        blob: blob,
+        width,
+        height,
+        sourceUrl: normalizedUrl, // 元URLを保存
+        createdAt: Date.now(),
+      }
+
+      await addImage(imageRecord)
+      await loadData()
+      
+      // リセット
+      setImageUrl("")
+      setShowUrlInput(false)
+      alert("URLから画像を追加しました")
+    } catch (error) {
+      console.error("Failed to add image from URL:", error)
+      alert(`URLからの画像追加に失敗しました:\n${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setIsAddingFromUrl(false)
+    }
+  }
+
   const handleClearAll = async () => {
     if (
       !window.confirm(
@@ -137,9 +184,11 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
     }
   }
 
-  const filteredImages = images.filter((img) =>
-    img.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredImages = images
+    .filter((img) =>
+      img.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter((img) => !filterUrlOnly || !!img.sourceUrl) // URL画像のみフィルタを適用
 
   const totalSize = images.reduce((sum, img) => sum + img.size, 0)
 
@@ -196,14 +245,80 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
                 </>
               )}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowUrlInput(!showUrlInput)}
+              className="gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+              URLから画像を追加
+            </Button>
             <Button variant="outline" onClick={handleClearAll} className="text-destructive">
               全データ削除
             </Button>
           </div>
         </section>
 
-        {/* Search */}
-        <section>
+        {/* URL Input Section */}
+        {showUrlInput && (
+          <section className="rounded-lg border bg-card p-4 shadow-sm">
+            <h3 className="mb-3 font-semibold">URLから画像を追加</h3>
+            <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm">
+              <h4 className="mb-2 font-semibold text-blue-900">💡 共有機能について</h4>
+              <p className="mb-2 text-blue-800">
+                <strong>アップロードした画像は、あなたのブラウザにだけ保存されるため、他の人と共有できません。</strong>
+              </p>
+              <p className="text-blue-700">
+                共有したいCASEを作るには、GoogleドライブなどのオンラインURLから画像を追加してください。
+                URLから追加した画像は、共有リンクを通じて他の人も同じ画像を見ることができます。
+              </p>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              画像の直リンクURLを入力してください。Google DriveのURLは自動で変換されます。
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isAddingFromUrl) {
+                    handleAddFromUrl()
+                  }
+                }}
+                disabled={isAddingFromUrl}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleAddFromUrl}
+                disabled={isAddingFromUrl || !imageUrl.trim()}
+              >
+                {isAddingFromUrl ? "取り込み中..." : "追加"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowUrlInput(false)
+                  setImageUrl("")
+                }}
+                disabled={isAddingFromUrl}
+              >
+                キャンセル
+              </Button>
+            </div>
+          </section>
+        )}
+
+        {/* Search & Filter */}
+        <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Input
             type="search"
             placeholder="画像名で検索..."
@@ -211,6 +326,21 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="max-w-md"
           />
+          <Button
+            variant={filterUrlOnly ? "default" : "outline"}
+            onClick={() => setFilterUrlOnly(!filterUrlOnly)}
+            className="gap-2"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
+            </svg>
+            {filterUrlOnly ? "URL画像のみ表示中" : "すべて表示"}
+          </Button>
         </section>
 
         {/* Images Grid */}
@@ -218,8 +348,8 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
           {filteredImages.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-border p-12 text-center">
               <p className="text-muted-foreground">
-                {searchQuery
-                  ? "検索結果が見つかりませんでした"
+                {searchQuery || filterUrlOnly
+                  ? "条件に一致する画像が見つかりませんでした"
                   : "画像がありません。「画像をアップロード」ボタンから追加してください。"}
               </p>
             </div>
@@ -292,6 +422,15 @@ function ImageCard({ image, usage, onDelete }: ImageCardProps) {
           </span>
           <span>{formatFileSize(image.size)}</span>
         </div>
+
+        {image.sourceUrl && (
+          <div className="rounded bg-muted/50 p-2 text-xs">
+            <div className="font-semibold text-foreground">元URL:</div>
+            <div className="truncate text-muted-foreground" title={image.sourceUrl}>
+              {image.sourceUrl}
+            </div>
+          </div>
+        )}
 
         {usage.length > 0 && (
           <div className="rounded border border-primary/20 bg-primary/5 p-2 text-xs">

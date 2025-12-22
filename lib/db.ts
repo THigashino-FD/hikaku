@@ -8,6 +8,7 @@ export interface ImageRecord {
   blob: Blob;
   width: number;
   height: number;
+  sourceUrl?: string; // URL経由で取り込んだ画像の元URL（共有用）
   createdAt: number;
 }
 
@@ -86,22 +87,32 @@ export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
       }
 
       // マイグレーション: v1 -> v2（初期位置・アニメ種別追加）
-      if (oldVersion < 2 && newVersion >= 2) {
+      if (oldVersion < 2 && (newVersion ?? DB_VERSION) >= 2) {
         const caseStore = transaction.objectStore('cases');
         caseStore.openCursor().then(function migrateCursor(cursor) {
           if (!cursor) return;
-          const record = cursor.value as any;
-          
-          // 既存レコードにフィールドを追加
-          if (record.initialSliderPosition === undefined) {
-            record.initialSliderPosition = 50; // デフォルト: 中央
-          }
-          if (record.animationType === undefined) {
-            // CASE 01のみデモアニメーション、それ以外はなし
-            record.animationType = record.order === 0 ? 'demo' : 'none';
-          }
-          
-          cursor.update(record).then(() => {
+          const record = cursor.value as unknown as Partial<CaseRecord>;
+
+          const updated: CaseRecord = {
+            id: record.id ?? cursor.primaryKey?.toString?.() ?? "",
+            title: record.title ?? "",
+            description: record.description,
+            order: record.order ?? 0,
+            beforeImageId: record.beforeImageId,
+            afterImageId: record.afterImageId,
+            view:
+              record.view ?? {
+                before: { scale: 100, x: 0, y: 0 },
+                after: { scale: 100, x: 0, y: 0 },
+              },
+            initialSliderPosition: record.initialSliderPosition ?? 50,
+            animationType:
+              record.animationType ?? ((record.order ?? 0) === 0 ? 'demo' : 'none'),
+            createdAt: record.createdAt ?? Date.now(),
+            updatedAt: record.updatedAt ?? Date.now(),
+          };
+
+          cursor.update(updated).then(() => {
             return cursor.continue().then(migrateCursor);
           });
         });

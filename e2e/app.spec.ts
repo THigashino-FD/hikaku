@@ -249,14 +249,14 @@ test.describe('閲覧ページの機能', () => {
 
   test('調整パネルを開閉できる', async ({ page }) => {
     // 調整ボタンをクリック
-    await page.getByRole('button', { name: '縮尺・位置を調整' }).first().click();
+    await page.getByRole('button', { name: /^調整$/ }).first().click();
     
     // 調整パネルが表示される
     await expect(page.getByText('改築前の画像調整')).toBeVisible();
     await expect(page.getByText('改築後の画像調整')).toBeVisible();
     
     // 閉じるボタンをクリック
-    await page.getByRole('button', { name: '調整パネルを閉じる' }).first().click();
+    await page.getByRole('button', { name: '調整を閉じる' }).first().click();
     
     // パネルが閉じる
     await expect(page.getByText('改築前の画像調整')).not.toBeVisible();

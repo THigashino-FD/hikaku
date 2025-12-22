@@ -96,7 +96,7 @@ PlaywrightによるE2Eテストを実装しています。
 npm test
 ```
 
-詳細は [E2E_TEST_REPORT.md](./E2E_TEST_REPORT.md) を参照してください。
+詳細は [E2Eテストレポート](./docs/reports/e2e-test-report.md) を参照してください。
 
 ## プロジェクト構成
 
@@ -116,11 +116,16 @@ hikaku-editor/
 ├── lib/                     # ユーティリティ
 │   ├── db.ts                # IndexedDB操作
 │   ├── init.ts              # 初期化処理
+│   ├── share.ts             # 共有機能
 │   └── image-utils.ts       # 画像処理
 ├── e2e/                     # E2Eテスト
 │   └── app.spec.ts          # テストスイート
 ├── public/                  # 静的ファイル
-│   └── *.png, *.jpg         # デフォルト画像
+│   ├── samples/             # サンプル画像
+│   └── branding/            # ブランド資産
+├── docs/                    # ドキュメント
+│   ├── features/            # 機能仕様
+│   └── reports/             # レポート・履歴
 └── playwright.config.ts     # Playwright設定
 ```
 
@@ -190,8 +195,17 @@ This project is private and proprietary to FREEDOM ARCHITECTS.
 
 ## ドキュメント
 
-- [実装仕様書](./IMPLEMENTATION.md)
-- [デフォルトCASE設定](./DEFAULT_CASES_SETUP.md)
-- [E2Eテストレポート](./E2E_TEST_REPORT.md)
-- [エラー修正履歴](./ERROR_FIXED_FINAL.md)
-- [動作確認チェックリスト](./CHECKLIST.md)
+### 仕様・設定
+- [実装仕様書](./docs/implementation.md)
+- [デフォルトCASE設定](./docs/default-cases-setup.md)
+- [動作確認チェックリスト](./docs/checklist.md)
+
+### 機能仕様
+- [共有機能](./docs/features/share.md)
+- [初期スライダー位置機能](./docs/features/initial-slider-position.md)
+- [新機能一覧](./docs/features/new-features.md)
+
+### レポート・履歴
+- [E2Eテストレポート](./docs/reports/e2e-test-report.md)
+- [アニメーション最適化](./docs/reports/animation-optimization.md)
+- [エラー修正履歴](./docs/reports/error-fixed-final.md)

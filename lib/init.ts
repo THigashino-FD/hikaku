@@ -101,16 +101,16 @@ export async function setupDefaultCases(): Promise<void> {
     console.log('Setting up default cases...');
 
     // CASE 01の画像を登録
-    const beforeImage1Id = await setupDefaultImage('/case-01-before.png', 'case-01-before.png');
-    const afterImage1Id = await setupDefaultImage('/case-01-after.jpg', 'case-01-after.jpg');
+    const beforeImage1Id = await setupDefaultImage('/samples/case-01-before.png', 'case-01-before.png');
+    const afterImage1Id = await setupDefaultImage('/samples/case-01-after.jpg', 'case-01-after.jpg');
 
     // CASE 02の画像を登録
-    const beforeImage2Id = await setupDefaultImage('/case-02-before.png', 'case-02-before.png');
-    const afterImage2Id = await setupDefaultImage('/case-02-after.jpg', 'case-02-after.jpg');
+    const beforeImage2Id = await setupDefaultImage('/samples/case-02-before.png', 'case-02-before.png');
+    const afterImage2Id = await setupDefaultImage('/samples/case-02-after.jpg', 'case-02-after.jpg');
 
     // CASE 03の画像を登録
-    const beforeImage3Id = await setupDefaultImage('/case-03-before.png', 'case-03-before.png');
-    const afterImage3Id = await setupDefaultImage('/case-03-after.png', 'case-03-after.png');
+    const beforeImage3Id = await setupDefaultImage('/samples/case-03-before.png', 'case-03-before.png');
+    const afterImage3Id = await setupDefaultImage('/samples/case-03-after.png', 'case-03-after.png');
 
     // CASE 01を作成
     const case1: CaseRecord = {

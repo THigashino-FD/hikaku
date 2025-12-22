@@ -21,6 +21,9 @@ interface BeforeAfterSliderProps {
   defaultAfterY?: number
   initialSliderPosition?: number // 初期スライダー位置（0-100%）
   animationType?: 'none' | 'demo' // アニメーション種別
+  initialComparisonMode?: ComparisonMode // 比較モードの初期値
+  shareTitle?: string
+  shareDescription?: string
   onSaveViewSettings?: (
     beforeSettings: { scale: number; x: number; y: number },
     afterSettings: { scale: number; x: number; y: number }
@@ -43,6 +46,7 @@ export function BeforeAfterSlider({
   defaultAfterY = 0,
   initialSliderPosition = 50,
   animationType = 'none',
+  initialComparisonMode = "slider",
   onSaveViewSettings,
 }: BeforeAfterSliderProps) {
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
@@ -59,30 +63,44 @@ export function BeforeAfterSlider({
   const [beforeY, setBeforeY] = useState(defaultBeforeY)
   const [afterX, setAfterX] = useState(defaultAfterX)
   const [afterY, setAfterY] = useState(defaultAfterY)
-  const [showControls, setShowControls] = useState(false)
-  const [customBeforeUrl, setCustomBeforeUrl] = useState("")
-  const [customAfterUrl, setCustomAfterUrl] = useState("")
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("slider")
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(initialComparisonMode)
   const [beforeImageLoaded, setBeforeImageLoaded] = useState(false)
   const [afterImageLoaded, setAfterImageLoaded] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
   const [animationCancelled, setAnimationCancelled] = useState(false)
+  const [panelMode, setPanelMode] = useState<"none" | "adjust">("none")
   
   const containerRef = useRef<HTMLDivElement>(null)
   const fullscreenRef = useRef<HTMLDivElement>(null)
   const animationFrameRef = useRef<number | null>(null)
   const isAnimatingRef = useRef(false) // ロジック制御用のRef
 
-  const displayBeforeImage = customBeforeUrl || beforeImage
-  const displayAfterImage = customAfterUrl || afterImage
+  const displayBeforeImage = beforeImage
+  const displayAfterImage = afterImage
+
+  // 画像のkey用に安全なIDを生成
+  // URLが変わったらkeyも変わるようにする（ハッシュ的な処理）
+  const getImageKey = (url: string | undefined, prefix: string) => {
+    if (!url) return `${prefix}-empty`
+    // URL全体をエンコードして一意性を確保（長さ制限付き）
+    const hash = Array.from(url).reduce((acc, char) => {
+      return ((acc << 5) - acc + char.charCodeAt(0)) | 0
+    }, 0)
+    return `${prefix}-${Math.abs(hash)}`
+  }
+  
+  const beforeImageKey = getImageKey(displayBeforeImage, 'before')
+  const afterImageKey = getImageKey(displayAfterImage, 'after')
 
   // 画像URLが変わったら読み込み状態をリセット
+  /* eslint-disable react-hooks/set-state-in-effect -- URL変更時のUI状態リセット（表示用stateの同期） */
   useEffect(() => {
     setBeforeImageLoaded(false)
     setAfterImageLoaded(false)
     setAnimationCancelled(false)
-  }, [displayBeforeImage, displayAfterImage])
+  }, [displayBeforeImage, displayAfterImage, beforeImageKey, afterImageKey])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // アニメーションをキャンセルする関数
   const cancelAnimation = () => {
@@ -173,6 +191,7 @@ export function BeforeAfterSlider({
     // 画像が両方読み込まれてからアニメーション開始
     if (beforeImageLoaded && afterImageLoaded) {
       isAnimatingRef.current = true
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- アニメーション開始をUIに反映
       setIsAnimating(true)
       animationFrameRef.current = requestAnimationFrame(animate)
     }
@@ -277,11 +296,6 @@ export function BeforeAfterSlider({
     setAfterY(defaultAfterY)
   }
 
-  const resetImages = () => {
-    setCustomBeforeUrl("")
-    setCustomAfterUrl("")
-  }
-
   const handleSaveViewSettings = () => {
     if (onSaveViewSettings) {
       onSaveViewSettings(
@@ -292,11 +306,18 @@ export function BeforeAfterSlider({
     }
   }
 
+  // 共有リンク生成は buildShareLink / copyShareLink に統合
+
   return (
     <div ref={fullscreenRef} className={cn("space-y-4", isFullscreen && "fixed inset-0 z-50 bg-background p-6 overflow-auto")}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowControls(!showControls)} className="gap-2 bg-transparent">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPanelMode(panelMode === "adjust" ? "none" : "adjust")}
+            className="gap-2 bg-transparent"
+          >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -305,7 +326,7 @@ export function BeforeAfterSlider({
                 d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
               />
             </svg>
-            {showControls ? "調整パネルを閉じる" : "縮尺・位置を調整"}
+            {panelMode === "adjust" ? "調整を閉じる" : "調整"}
           </Button>
 
           {/* 比較モード切替 */}
@@ -348,50 +369,10 @@ export function BeforeAfterSlider({
         </Button>
       </div>
 
-      {showControls && (
+      {panelMode !== "none" && (
         <div className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
-          <div className="space-y-4 rounded-xl border border-border/60 bg-muted/40 p-4">
-            <h4 className="font-semibold text-foreground">画像のURL入力</h4>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">改築前の画像URL</label>
-                <Input
-                  type="url"
-                  placeholder="https://example.com/before.jpg"
-                  value={customBeforeUrl}
-                  onChange={(e) => setCustomBeforeUrl(e.target.value)}
-                  className="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">改築後の画像URL</label>
-                <Input
-                  type="url"
-                  placeholder="https://example.com/after.jpg"
-                  value={customAfterUrl}
-                  onChange={(e) => setCustomAfterUrl(e.target.value)}
-                  className="bg-background"
-                />
-              </div>
-            </div>
-            {(customBeforeUrl || customAfterUrl) && (
-              <div className="flex justify-center">
-                <Button onClick={resetImages} variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  デフォルト画像に戻す
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
+          {panelMode === "adjust" && (
+            <div className="grid gap-6 md:grid-cols-2">
             {/* Before Image Controls */}
             <div className="space-y-4">
               <h4 className="font-semibold text-foreground">改築前の画像調整</h4>
@@ -581,7 +562,8 @@ export function BeforeAfterSlider({
                 </div>
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-center gap-3">
@@ -636,6 +618,7 @@ export function BeforeAfterSlider({
               </div>
             )}
             <Image
+              key={beforeImageKey}
               src={displayBeforeImage || "/placeholder.svg"}
               alt={beforeLabel}
               fill
@@ -664,6 +647,7 @@ export function BeforeAfterSlider({
               </div>
             )}
             <Image
+              key={afterImageKey}
               src={displayAfterImage || "/placeholder.svg"}
               alt={afterLabel}
               fill
@@ -722,6 +706,7 @@ export function BeforeAfterSlider({
               </div>
             )}
             <Image
+              key={`${beforeImageKey}-side`}
               src={displayBeforeImage || "/placeholder.svg"}
               alt={beforeLabel}
               fill
@@ -748,6 +733,7 @@ export function BeforeAfterSlider({
               </div>
             )}
             <Image
+              key={`${afterImageKey}-side`}
               src={displayAfterImage || "/placeholder.svg"}
               alt={afterLabel}
               fill
