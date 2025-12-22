@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2024-12-22
+
+### Performance Improvements
+- 起動時間の最適化
+  - WebKit判定を共通化 (`lib/browser.ts`)
+  - 初期化処理のメモ化で多重実行を防止
+  - 固定500ms待機を削除し、WebKit環境のみリトライに変更
+  - 管理ページの画像取得を並列化 (`Promise.all`)
+- 期待される改善効果
+  - 初回アクセス時: 約50%削減（1.5-2.5秒 → 0.5-1.0秒）
+  - 2回目以降: 約60%削減（0.5-1.0秒 → 0.2-0.4秒）
+
+### Documentation
+- パフォーマンス分析レポートを追加
+- 実装意図分析レポートを追加
+- E2Eテスト結果レポートを追加
+
 ## [0.1.0] - 2024-12-22
 
 ### Added
