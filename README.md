@@ -1,4 +1,4 @@
-# hikaku-editor（改築ビフォー/アフター比較ツール）
+# hikaku-editor（劇的ビフォー/アフターツール）
 
 FREEDOM ARCHITECTS向けの改築プロジェクトレビューツール。改築前後の画像を直感的に比較できるWebアプリケーション。
 

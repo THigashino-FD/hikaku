@@ -412,57 +412,26 @@ export default function ManagePage() {
 
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
         {/* Statistics */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">CASE総数</p>
-                <p className="mt-2 text-3xl font-bold">{cases.length}</p>
-              </div>
-              <svg className="h-10 w-10 text-primary/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">CASE総数</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">{cases.length}</p>
           </div>
-
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">画像総数</p>
-                <p className="mt-2 text-3xl font-bold">{images.length}</p>
-              </div>
-              <svg className="h-10 w-10 text-blue-500/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
+          <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">画像総数</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">{images.length}</p>
           </div>
-
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">共有可能CASE</p>
-                <p className="mt-2 text-3xl font-bold text-green-600">
-                  {Object.values(shareableStatus).filter(Boolean).length}
-                </p>
-              </div>
-              <svg className="h-10 w-10 text-green-500/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
+          <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">共有可能CASE</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {Object.values(shareableStatus).filter(Boolean).length}
+            </p>
           </div>
-
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">URL画像</p>
-                <p className="mt-2 text-3xl font-bold text-blue-600">
-                  {images.filter((img) => img.sourceUrl).length}
-                </p>
-              </div>
-              <svg className="h-10 w-10 text-blue-500/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </div>
+          <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">URL画像</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {images.filter((img) => img.sourceUrl).length}
+            </p>
           </div>
         </section>
 

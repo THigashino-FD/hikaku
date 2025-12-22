@@ -25,12 +25,15 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
   const [beforeImageUrl, setBeforeImageUrl] = useState<string>("")
   const [afterImageUrl, setAfterImageUrl] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
+  const [imageError, setImageError] = useState<{ before: boolean; after: boolean }>({ before: false, after: false })
+  const [retryKey, setRetryKey] = useState(0) // 再読み込み用のキー
   const beforeUrlRef = useRef<string>("")
   const afterUrlRef = useRef<string>("")
 
   useEffect(() => {
     const loadImages = async () => {
       setIsLoading(true)
+      setImageError({ before: false, after: false })
       try {
         if (caseRecord.beforeImageId) {
           const image = await getImageById(caseRecord.beforeImageId)
@@ -73,7 +76,27 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
       beforeUrlRef.current = ""
       afterUrlRef.current = ""
     }
-  }, [caseRecord.beforeImageId, caseRecord.afterImageId])
+  }, [caseRecord.beforeImageId, caseRecord.afterImageId, retryKey])
+
+  const handleImageError = (side: 'before' | 'after') => {
+    setImageError(prev => ({ ...prev, [side]: true }))
+  }
+
+  const handleRetry = () => {
+    // URLを再生成して再読み込みを試みる
+    if (beforeUrlRef.current) {
+      revokeObjectURL(beforeUrlRef.current)
+      beforeUrlRef.current = ""
+    }
+    if (afterUrlRef.current) {
+      revokeObjectURL(afterUrlRef.current)
+      afterUrlRef.current = ""
+    }
+    setBeforeImageUrl("")
+    setAfterImageUrl("")
+    setImageError({ before: false, after: false })
+    setRetryKey(prev => prev + 1)
+  }
 
   if (isLoading) {
     return (
@@ -91,6 +114,7 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
   }
 
   if (!beforeImageUrl || !afterImageUrl) {
+    const hasError = imageError.before || imageError.after
     return (
       <section className="space-y-4">
         <div className="flex items-center justify-between border-b border-border pb-2">
@@ -99,12 +123,25 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
           </h2>
         </div>
         <div className="flex h-96 flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-border bg-muted/30">
-          <div className="text-sm font-medium text-muted-foreground">
-            画像が設定されていません
-          </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/manage">管理ページで設定</Link>
-          </Button>
+          {hasError ? (
+            <>
+              <div className="text-sm font-medium text-destructive">
+                画像の読み込みに失敗しました
+              </div>
+              <Button variant="outline" size="sm" onClick={handleRetry}>
+                再読み込み
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="text-sm font-medium text-muted-foreground">
+                画像が設定されていません
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/manage">管理ページで設定</Link>
+              </Button>
+            </>
+          )}
         </div>
       </section>
     )
@@ -122,6 +159,28 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
           )}
         </div>
       </div>
+      {(imageError.before || imageError.after) && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive">
+                画像の読み込みに失敗しました
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {imageError.before && imageError.after
+                  ? "Before/After両方の画像"
+                  : imageError.before
+                  ? "Before画像"
+                  : "After画像"}
+                の読み込みに失敗しました。再読み込みを試してください。
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              再読み込み
+            </Button>
+          </div>
+        </div>
+      )}
       <BeforeAfterSlider
         beforeImage={beforeImageUrl}
         afterImage={afterImageUrl}
@@ -139,6 +198,7 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
         onSaveViewSettings={(beforeSettings, afterSettings) =>
           onSaveViewSettings(caseRecord.id, beforeSettings, afterSettings)
         }
+        onImageError={handleImageError}
       />
     </section>
   )

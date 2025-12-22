@@ -30,7 +30,7 @@ test.describe('レスポンシブ（基本崩れチェック）', () => {
     await page.waitForTimeout(3000);
 
     await expect(page.getByRole('link', { name: '管理ページ' })).toBeVisible();
-    await expect(page.getByText('改築ビフォー/アフター比較')).toBeVisible();
+    await expect(page.getByText('劇的ビフォー/アフターツール')).toBeVisible();
 
     // CASEが表示されていること（最低1つ）
     await expect(page.getByText('CASE 01')).toBeVisible();

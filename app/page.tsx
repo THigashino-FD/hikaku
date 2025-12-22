@@ -205,7 +205,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-background overflow-x-hidden">
+    <main className="min-h-screen bg-background">
       {/* Top bar - Dark Teal Background per LP reference */}
       <header className="sticky top-0 z-40 bg-primary py-4 shadow-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
@@ -241,7 +241,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl space-y-12 px-6 py-10 md:px-10">
+      <div className="mx-auto max-w-7xl space-y-12 px-6 py-10 md:px-10 overflow-x-hidden">
         {/* Share preview */}
         {shareError && (
           <section className="rounded-xl border border-destructive/30 bg-destructive/5 p-6">
@@ -303,7 +303,7 @@ export default function Home() {
         {/* Tool Description */}
         <section className="border-l-4 border-primary pl-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-            改築ビフォー/アフター比較
+            劇的ビフォー/アフターツール
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
             設計レビューおよび施主様への確認用ツールです。

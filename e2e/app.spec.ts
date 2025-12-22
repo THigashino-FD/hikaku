@@ -12,7 +12,7 @@ test.describe('初期表示とデフォルトCASE', () => {
     await page.goto('/');
     
     // ヘッダーが表示される（モバイルでは一部文言が非表示のため、主要文言のみ検証）
-    await expect(page.getByText('改築ビフォー/アフター比較')).toBeVisible();
+    await expect(page.getByText('劇的ビフォー/アフターツール')).toBeVisible();
     
     // 管理ページボタンが表示される
     await expect(page.getByRole('link', { name: '管理ページ', exact: true })).toBeVisible();

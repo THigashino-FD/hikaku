@@ -27,6 +27,7 @@ interface BeforeAfterSliderProps {
     beforeSettings: { scale: number; x: number; y: number },
     afterSettings: { scale: number; x: number; y: number }
   ) => void
+  onImageError?: (side: 'before' | 'after') => void // 画像読み込みエラー時のコールバック
 }
 
 type ComparisonMode = "slider" | "sideBySide"
@@ -47,6 +48,7 @@ export function BeforeAfterSlider({
   animationType = 'none',
   initialComparisonMode = "slider",
   onSaveViewSettings,
+  onImageError,
 }: BeforeAfterSliderProps) {
   const { showToast } = useToast()
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
@@ -340,10 +342,11 @@ export function BeforeAfterSlider({
               aria-label="スライダー"
             >
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16M8 8l-4 4 4 4m8-8l4 4-4 4" />
               </svg>
               <span className="hidden sm:inline">スライダー</span>
             </Button>
+
             <Button
               variant={comparisonMode === "sideBySide" ? "default" : "ghost"}
               size="sm"
@@ -352,7 +355,8 @@ export function BeforeAfterSlider({
               aria-label="左右比較"
             >
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v16M9 4l-6 6m6-6l6 6" />
+                <rect x="3" y="5" width="8" height="14" rx="1" strokeWidth={2} />
+                <rect x="13" y="5" width="8" height="14" rx="1" strokeWidth={2} />
               </svg>
               <span className="hidden sm:inline">左右比較</span>
             </Button>
@@ -632,6 +636,11 @@ export function BeforeAfterSlider({
               }}
               draggable={false}
               onLoad={() => setBeforeImageLoaded(true)}
+              onError={() => {
+                if (onImageError) {
+                  onImageError('before')
+                }
+              }}
               priority
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
             />
@@ -661,6 +670,11 @@ export function BeforeAfterSlider({
               }}
               draggable={false}
               onLoad={() => setAfterImageLoaded(true)}
+              onError={() => {
+                if (onImageError) {
+                  onImageError('after')
+                }
+              }}
               priority
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
             />
@@ -720,6 +734,11 @@ export function BeforeAfterSlider({
               }}
               draggable={false}
               onLoad={() => setBeforeImageLoaded(true)}
+              onError={() => {
+                if (onImageError) {
+                  onImageError('before')
+                }
+              }}
               priority
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 40vw, 35vw"
             />
@@ -747,6 +766,11 @@ export function BeforeAfterSlider({
               }}
               draggable={false}
               onLoad={() => setAfterImageLoaded(true)}
+              onError={() => {
+                if (onImageError) {
+                  onImageError('after')
+                }
+              }}
               priority
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 40vw, 35vw"
             />
