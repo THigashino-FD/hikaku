@@ -458,6 +458,7 @@ interface ImageCardProps {
 function ImageCard({ image, usage, onDelete }: ImageCardProps) {
   const imageUrl = useMemo(() => createObjectURL(image.blob), [image.blob])
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -466,27 +467,40 @@ function ImageCard({ image, usage, onDelete }: ImageCardProps) {
   }, [imageUrl])
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-      {/* Thumbnail */}
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {!imageLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
-            <svg className="h-8 w-8 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-        )}
-        {imageUrl && (
-          <Image 
-            src={imageUrl} 
-            alt={image.name} 
-            fill
-            className="object-cover"
-            onLoad={() => setImageLoaded(true)}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-          />
-        )}
-      </div>
+    <>
+      <div className="overflow-hidden rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md">
+        {/* Thumbnail */}
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="relative aspect-video w-full overflow-hidden bg-muted cursor-pointer group"
+        >
+          {!imageLoaded && (
+            <div className="absolute inset-0 animate-pulse bg-muted flex items-center justify-center">
+              <svg className="h-8 w-8 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          )}
+          {imageUrl && (
+            <>
+              <Image 
+                src={imageUrl} 
+                alt={image.name} 
+                fill
+                className="object-cover transition-transform group-hover:scale-105"
+                onLoad={() => setImageLoaded(true)}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              />
+              {/* 拡大アイコンオーバーレイ */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                <svg className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                </svg>
+              </div>
+            </>
+          )}
+        </button>
 
       {/* Info */}
       <div className="space-y-2 p-3">
@@ -531,6 +545,55 @@ function ImageCard({ image, usage, onDelete }: ImageCardProps) {
         </Button>
       </div>
     </div>
+
+      {/* 画像プレビューモーダル */}
+      {showPreview && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <button
+            onClick={() => setShowPreview(false)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            aria-label="閉じる"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div 
+            className="relative max-h-[90vh] max-w-[90vw]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt={image.name}
+                className="max-h-[90vh] max-w-[90vw] object-contain"
+              />
+            )}
+            
+            {/* 画像情報オーバーレイ */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-white">
+              <div className="text-lg font-semibold">{image.name}</div>
+              <div className="mt-1 flex flex-wrap gap-4 text-sm">
+                <span>{image.width} × {image.height}</span>
+                <span>{formatFileSize(image.size)}</span>
+                {image.sourceUrl && (
+                  <span className="flex items-center gap-1">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    URL画像
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
