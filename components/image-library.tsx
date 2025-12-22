@@ -32,8 +32,48 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const [imageUrl, setImageUrl] = useState("")
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false)
   const [filterUrlOnly, setFilterUrlOnly] = useState(false) // URL画像のみフィルタ
+  const [urlValidation, setUrlValidation] = useState<{ valid: boolean; message: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { showToast } = useToast()
+
+  // URL検証関数
+  const validateUrl = (url: string): { valid: boolean; message: string } => {
+    if (!url.trim()) {
+      return { valid: false, message: "" }
+    }
+
+    try {
+      const urlObj = new URL(url)
+      
+      // プロトコルチェック
+      if (!["http:", "https:"].includes(urlObj.protocol)) {
+        return { valid: false, message: "http:// または https:// で始まるURLを入力してください" }
+      }
+
+      // 画像拡張子チェック（簡易）
+      const pathname = urlObj.pathname.toLowerCase()
+      const hasImageExt = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(pathname)
+      const isGoogleDrive = urlObj.hostname.includes("drive.google.com")
+      
+      if (!hasImageExt && !isGoogleDrive) {
+        return { valid: false, message: "画像ファイル（.jpg, .png, .gif, .webp等）のURLを入力してください" }
+      }
+
+      return { valid: true, message: "✓ 有効なURLです" }
+    } catch {
+      return { valid: false, message: "無効なURL形式です" }
+    }
+  }
+
+  // URL入力時のリアルタイム検証
+  useEffect(() => {
+    if (imageUrl.trim()) {
+      const validation = validateUrl(imageUrl)
+      setUrlValidation(validation)
+    } else {
+      setUrlValidation(null)
+    }
+  }, [imageUrl])
 
   const loadData = async () => {
     try {
@@ -230,6 +270,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
               className="gap-2"
+              title="対応形式: JPEG, PNG, GIF, WebP"
             >
               {isUploading ? (
                 <>処理中...</>
@@ -266,6 +307,11 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
               全データ削除
             </Button>
           </div>
+          
+          {/* ファイルサイズ情報 */}
+          <div className="w-full text-xs text-muted-foreground">
+            ※ アップロード時、画像は自動的に最大2000px、品質90%に最適化されます（JPEG, PNG, GIF, WebP対応）
+          </div>
         </section>
 
         {/* URL Input Section */}
@@ -285,36 +331,66 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
             <p className="mb-4 text-sm text-muted-foreground">
               画像の直リンクURLを入力してください。Google DriveのURLは自動で変換されます。
             </p>
-            <div className="flex gap-2">
-              <Input
-                type="url"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !isAddingFromUrl) {
-                    handleAddFromUrl()
-                  }
-                }}
-                disabled={isAddingFromUrl}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleAddFromUrl}
-                disabled={isAddingFromUrl || !imageUrl.trim()}
-              >
-                {isAddingFromUrl ? "取り込み中..." : "追加"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowUrlInput(false)
-                  setImageUrl("")
-                }}
-                disabled={isAddingFromUrl}
-              >
-                キャンセル
-              </Button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !isAddingFromUrl && urlValidation?.valid) {
+                      handleAddFromUrl()
+                    }
+                  }}
+                  disabled={isAddingFromUrl}
+                  className={`flex-1 ${urlValidation && !urlValidation.valid && imageUrl.trim() ? "border-destructive" : ""} ${urlValidation?.valid ? "border-green-500" : ""}`}
+                />
+                <Button
+                  onClick={handleAddFromUrl}
+                  disabled={isAddingFromUrl || !imageUrl.trim() || (urlValidation ? !urlValidation.valid : false)}
+                >
+                  {isAddingFromUrl ? "取り込み中..." : "追加"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowUrlInput(false)
+                    setImageUrl("")
+                    setUrlValidation(null)
+                  }}
+                  disabled={isAddingFromUrl}
+                >
+                  キャンセル
+                </Button>
+              </div>
+              
+              {/* バリデーション結果表示 */}
+              {urlValidation && imageUrl.trim() && (
+                <div className={`flex items-center gap-2 text-sm ${urlValidation.valid ? "text-green-600" : "text-destructive"}`}>
+                  {urlValidation.valid ? (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span>{urlValidation.message}</span>
+                </div>
+              )}
+
+              {/* Google Drive URL例 */}
+              <details className="text-xs text-muted-foreground">
+                <summary className="cursor-pointer hover:text-foreground">Google DriveのURL例を見る</summary>
+                <div className="mt-2 space-y-1 rounded bg-muted p-2">
+                  <p className="font-medium">対応URL形式：</p>
+                  <code className="block">https://drive.google.com/file/d/[FILE_ID]/view</code>
+                  <code className="block">https://drive.google.com/uc?id=[FILE_ID]</code>
+                  <p className="mt-2 text-[10px]">※ 共有設定を「リンクを知っている全員」に変更してください</p>
+                </div>
+              </details>
             </div>
           </section>
         )}

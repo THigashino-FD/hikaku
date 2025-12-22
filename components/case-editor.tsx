@@ -13,6 +13,7 @@ import {
 } from "@/lib/db"
 import { BeforeAfterSlider } from "@/components/before-after-slider"
 import { ImagePicker } from "@/components/image-picker"
+import { useToast } from "@/components/ui/toast"
 
 interface CaseEditorProps {
   caseRecord: CaseRecord
@@ -25,6 +26,7 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   const [editedCase, setEditedCase] = useState<CaseRecord>(caseRecord)
   const [beforeImageUrl, setBeforeImageUrl] = useState<string>("")
   const [afterImageUrl, setAfterImageUrl] = useState<string>("")
+  const { showToast } = useToast()
 
   useEffect(() => {
     const loadImages = async () => {
@@ -58,6 +60,17 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   }, [editedCase.beforeImageId, editedCase.afterImageId])
 
   const handleSave = () => {
+    // バリデーション
+    if (!editedCase.title.trim()) {
+      showToast("タイトルを入力してください", "warning")
+      return
+    }
+
+    if (!editedCase.beforeImageId || !editedCase.afterImageId) {
+      showToast("Before/After両方の画像を選択してください", "warning")
+      return
+    }
+
     onSave(editedCase)
   }
 
@@ -98,14 +111,21 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
           <h2 className="text-lg font-semibold">基本情報</h2>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">タイトル</label>
+            <label className="text-sm font-medium">
+              タイトル <span className="text-destructive">*</span>
+            </label>
             <Input
               value={editedCase.title}
               onChange={(e) =>
                 setEditedCase({ ...editedCase, title: e.target.value })
               }
               placeholder="例: CASE 01"
+              required
+              className={!editedCase.title.trim() ? "border-destructive" : ""}
             />
+            {!editedCase.title.trim() && (
+              <p className="text-xs text-destructive">タイトルは必須です</p>
+            )}
           </div>
 
           <div className="space-y-2">
