@@ -132,13 +132,6 @@ export async function setupDefaultCases(): Promise<void> {
 
     console.log('Setting up default cases...');
 
-    let beforeImage1Id: string | undefined;
-    let afterImage1Id: string | undefined;
-    let beforeImage2Id: string | undefined;
-    let afterImage2Id: string | undefined;
-    let beforeImage3Id: string | undefined;
-    let afterImage3Id: string | undefined;
-
     const safeSetup = async (path: string, name: string) => {
       try {
         return await setupDefaultImage(path, name);
@@ -148,12 +141,12 @@ export async function setupDefaultCases(): Promise<void> {
       }
     };
 
-    beforeImage1Id = await safeSetup('/samples/case-01-before.png', 'case-01-before.png');
-    afterImage1Id = await safeSetup('/samples/case-01-after.jpg', 'case-01-after.jpg');
-    beforeImage2Id = await safeSetup('/samples/case-02-before.png', 'case-02-before.png');
-    afterImage2Id = await safeSetup('/samples/case-02-after.jpg', 'case-02-after.jpg');
-    beforeImage3Id = await safeSetup('/samples/case-03-before.png', 'case-03-before.png');
-    afterImage3Id = await safeSetup('/samples/case-03-after.png', 'case-03-after.png');
+    const beforeImage1Id = await safeSetup('/samples/case-01-before.png', 'case-01-before.png');
+    const afterImage1Id = await safeSetup('/samples/case-01-after.jpg', 'case-01-after.jpg');
+    const beforeImage2Id = await safeSetup('/samples/case-02-before.png', 'case-02-before.png');
+    const afterImage2Id = await safeSetup('/samples/case-02-after.jpg', 'case-02-after.jpg');
+    const beforeImage3Id = await safeSetup('/samples/case-03-before.png', 'case-03-before.png');
+    const afterImage3Id = await safeSetup('/samples/case-03-after.png', 'case-03-after.png');
 
     // CASE 01を作成
     const case1: CaseRecord = {
