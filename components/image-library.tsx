@@ -170,12 +170,27 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
 
     setIsAddingFromUrl(true)
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-library.tsx:165',message:'handleAddFromUrl started',data:{originalUrl:imageUrl.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     try {
       // Google DriveのURLを変換
       const normalizedUrl = convertGoogleDriveUrl(imageUrl.trim())
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-library.tsx:175',message:'URL converted',data:{originalUrl:imageUrl.trim(),normalizedUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       // URLから画像を取得してリサイズ
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-library.tsx:178',message:'calling fetchAndResizeImage',data:{url:normalizedUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       const { blob, width, height, type } = await fetchAndResizeImage(normalizedUrl, 2000, 0.9)
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-library.tsx:178',message:'fetchAndResizeImage succeeded',data:{blobSize:blob.size,width,height,type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
 
       const imageRecord: ImageRecord = {
         id: uuidv4(),
@@ -197,6 +212,9 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       setShowUrlInput(false)
       showToast("URLから画像を追加しました", "success")
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-library.tsx:199',message:'handleAddFromUrl error',data:{error:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:'Unknown',stack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       console.error("Failed to add image from URL:", error)
       showToast(`URLからの画像追加に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`, "error")
     } finally {

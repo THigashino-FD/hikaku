@@ -82,14 +82,24 @@ export function isValidImageUrl(url: string): boolean {
 /**
  * Google DriveのURLを直接アクセス可能な形式に変換
  * 例: https://drive.google.com/file/d/FILE_ID/view
- *  -> https://drive.google.com/uc?export=download&id=FILE_ID
+ *  -> https://drive.google.com/uc?export=view&id=FILE_ID
  */
 export function convertGoogleDriveUrl(url: string): string {
+  // #region agent log
+  if (typeof window !== 'undefined') {
+    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'share.ts:87',message:'convertGoogleDriveUrl called',data:{inputUrl:url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  }
+  // #endregion
   try {
     const parsed = new URL(url)
     
     // Google Driveのドメインチェック
     if (!parsed.hostname.includes('drive.google.com')) {
+      // #region agent log
+      if (typeof window !== 'undefined') {
+        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'share.ts:93',message:'not Google Drive URL',data:{inputUrl:url,returnedUrl:url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
       return url
     }
     
@@ -97,11 +107,28 @@ export function convertGoogleDriveUrl(url: string): string {
     const match = url.match(/\/file\/d\/([^\/]+)/)
     if (match && match[1]) {
       const fileId = match[1]
-      return `https://drive.google.com/uc?export=download&id=${fileId}`
+      // export=viewを使用して画像を直接取得（export=downloadはHTMLページを返すことがある）
+      const convertedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`
+      // #region agent log
+      if (typeof window !== 'undefined') {
+        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'share.ts:100',message:'Google Drive URL converted',data:{inputUrl:url,fileId,convertedUrl},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      }
+      // #endregion
+      return convertedUrl
     }
     
+    // #region agent log
+    if (typeof window !== 'undefined') {
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'share.ts:103',message:'no match found, returning original',data:{inputUrl:url,returnedUrl:url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
     return url
-  } catch {
+  } catch (error) {
+    // #region agent log
+    if (typeof window !== 'undefined') {
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'share.ts:105',message:'convertGoogleDriveUrl error',data:{inputUrl:url,error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
     return url
   }
 }
