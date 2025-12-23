@@ -156,7 +156,7 @@ test.describe('画像ライブラリ', () => {
     
     // 画像ライブラリページが表示される
     await expect(page.getByText('画像ライブラリ')).toBeVisible();
-    await expect(page.getByRole('button', { name: '画像をアップロード' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'ローカルに画像を保存' })).toBeVisible();
     await expect(page.getByRole('button', { name: '全データ削除' })).toBeVisible();
   });
 
@@ -368,6 +368,162 @@ test.describe('データ永続性', () => {
     // 4つのCASEが表示される
     const viewPageCaseHeaders = await page.locator('h2, h3').filter({ hasText: /CASE/ }).count();
     expect(viewPageCaseHeaders).toBeGreaterThanOrEqual(4);
+  });
+
+  test('ページリロード後も画像が表示される', async ({ page, context }) => {
+    // IndexedDBをクリア
+    await context.addInitScript(() => {
+      indexedDB.deleteDatabase('hikaku-editor');
+    });
+    
+    await page.goto('/');
+    await page.waitForTimeout(3000);
+    
+    // デフォルトCASEが表示されることを確認
+    await expect(page.getByText('CASE 01')).toBeVisible();
+    
+    // 画像が表示されるまで待つ（Next.js Imageコンポーネントの読み込みを待つ）
+    await page.waitForTimeout(3000);
+    
+    // 画像要素が存在することを確認
+    const images = await page.locator('img').all();
+    expect(images.length).toBeGreaterThan(0);
+    
+    // 最初の画像が正しく読み込まれているか確認
+    const firstImage = images[0];
+    const imageSrc = await firstImage.getAttribute('src');
+    expect(imageSrc).toBeTruthy();
+    
+    // 画像がエラーなく読み込まれているか確認（読み込み完了を待つ）
+    await page.waitForTimeout(1000);
+    const imageLoaded = await firstImage.evaluate((img: HTMLImageElement) => {
+      return img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+    });
+    expect(imageLoaded).toBe(true);
+    
+    // リロード
+    await page.reload();
+    await page.waitForTimeout(3000);
+    
+    // 引き続きCASEが表示される
+    await expect(page.getByText('CASE 01')).toBeVisible();
+    
+    // リロード後も画像が表示されることを確認
+    await page.waitForTimeout(2000);
+    const imagesAfterReload = await page.locator('img').all();
+    expect(imagesAfterReload.length).toBeGreaterThan(0);
+    
+    // リロード後の画像も正しく読み込まれているか確認
+    const firstImageAfterReload = imagesAfterReload[0];
+    const imageSrcAfterReload = await firstImageAfterReload.getAttribute('src');
+    expect(imageSrcAfterReload).toBeTruthy();
+    
+    // リロード後の画像がエラーなく読み込まれているか確認
+    await page.waitForTimeout(1000);
+    const imageLoadedAfterReload = await firstImageAfterReload.evaluate((img: HTMLImageElement) => {
+      return img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+    });
+    expect(imageLoadedAfterReload).toBe(true);
+  });
+
+  test('画像を追加した後、ページ更新しても保持される', async ({ page, context }) => {
+    await context.addInitScript(() => {
+      indexedDB.deleteDatabase('hikaku-editor');
+    });
+    
+    await page.goto('/manage');
+    await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
+    await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 15000 });
+    
+    // 画像ライブラリを開く
+    await page.getByRole('button', { name: /画像ライブラリ/ }).click();
+    await page.waitForTimeout(1000);
+    
+    // 初期画像数を確認（デフォルトで6枚）
+    const initialCountText = await page.locator('text=/\\d+ 画像/').textContent();
+    const initialCount = initialCountText ? parseInt(initialCountText.match(/\d+/)?.[0] || '0') : 0;
+    expect(initialCount).toBeGreaterThanOrEqual(6); // デフォルト画像が6枚
+    
+    // ページを更新して、初期画像が保持されていることを確認
+    await page.reload();
+    await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
+    
+    // 画像ライブラリを再度開く
+    await page.getByRole('button', { name: /画像ライブラリ/ }).click();
+    await page.waitForTimeout(2000);
+    
+    // 更新後も画像数が保持されていることを確認
+    const countAfterReloadText = await page.locator('text=/\\d+ 画像/').textContent();
+    const countAfterReload = countAfterReloadText ? parseInt(countAfterReloadText.match(/\d+/)?.[0] || '0') : 0;
+    // 初期画像数が保持されていることを確認
+    expect(countAfterReload).toBe(initialCount);
+  });
+
+  test('CASEに画像を設定した後、ページ更新しても画像が表示される', async ({ page, context }) => {
+    await context.addInitScript(() => {
+      indexedDB.deleteDatabase('hikaku-editor');
+    });
+    
+    await page.goto('/manage');
+    await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
+    await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 15000 });
+    
+    // CASE 01の編集ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    await caseSection.getByRole('button', { name: '編集' }).first().click();
+    await page.waitForTimeout(1500);
+    
+    // CASE編集ページが表示されることを確認
+    await expect(page.getByText('CASE編集')).toBeVisible();
+    
+    // 閲覧ページに移動して画像が表示されていることを確認
+    await page.goto('/');
+    await page.waitForTimeout(3000);
+    
+    // CASE 01が表示される
+    await expect(page.getByText('CASE 01')).toBeVisible();
+    
+    // 画像が表示されるまで待つ
+    await page.waitForTimeout(2000);
+    
+    // 画像要素が存在することを確認
+    const images = await page.locator('img').all();
+    expect(images.length).toBeGreaterThan(0);
+    
+    // 最初のCASEの画像が正しく読み込まれているか確認
+    const firstImage = images[0];
+    const imageSrc = await firstImage.getAttribute('src');
+    expect(imageSrc).toBeTruthy();
+    
+    // 画像がエラーなく読み込まれているか確認
+    await page.waitForTimeout(1000);
+    const imageLoaded = await firstImage.evaluate((img: HTMLImageElement) => {
+      return img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+    });
+    expect(imageLoaded).toBe(true);
+    
+    // ページを更新
+    await page.reload();
+    await page.waitForTimeout(3000);
+    
+    // 更新後もCASE 01が表示される
+    await expect(page.getByText('CASE 01')).toBeVisible();
+    
+    // 更新後も画像が表示されることを確認
+    const imagesAfterReload = await page.locator('img').all();
+    expect(imagesAfterReload.length).toBeGreaterThan(0);
+    
+    // 更新後の画像も正しく読み込まれているか確認
+    const firstImageAfterReload = imagesAfterReload[0];
+    const imageSrcAfterReload = await firstImageAfterReload.getAttribute('src');
+    expect(imageSrcAfterReload).toBeTruthy();
+    
+    // 更新後の画像がエラーなく読み込まれているか確認
+    await page.waitForTimeout(1000);
+    const imageLoadedAfterReload = await firstImageAfterReload.evaluate((img: HTMLImageElement) => {
+      return img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+    });
+    expect(imageLoadedAfterReload).toBe(true);
   });
 });
 

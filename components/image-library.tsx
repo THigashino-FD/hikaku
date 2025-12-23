@@ -133,7 +133,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       }
     } catch (error) {
       console.error("Failed to upload images:", error)
-      showToast("画像のアップロードに失敗しました", "error")
+      showToast("画像の追加に失敗しました", "error")
     } finally {
       setIsUploading(false)
     }
@@ -286,8 +286,23 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
               className="hidden"
             />
             <Button
+              onClick={() => setShowUrlInput(!showUrlInput)}
+              className="gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+              URLから画像を追加
+            </Button>
+            <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
+              variant="outline"
               className="gap-2"
               title="対応形式: JPEG, PNG, GIF, WebP"
             >
@@ -303,24 +318,9 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
                       d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
                   </svg>
-                  画像をアップロード
+                  ローカルに画像を保存
                 </>
               )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowUrlInput(!showUrlInput)}
-              className="gap-2"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                />
-              </svg>
-              URLから画像を追加
             </Button>
             <Button variant="outline" onClick={handleClearAll} className="text-destructive">
               全データ削除
@@ -329,7 +329,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
           
           {/* ファイルサイズ情報 */}
           <div className="w-full text-xs text-muted-foreground">
-            ※ アップロード時、画像は自動的に最大2000px、品質90%に最適化されます（JPEG, PNG, GIF, WebP対応）
+            ※ 追加時、画像は自動的に最大2000px、品質90%に最適化されます（JPEG, PNG, GIF, WebP対応）
           </div>
         </section>
 
@@ -340,7 +340,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
             <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm">
               <h4 className="mb-2 font-semibold text-blue-900">💡 共有機能について</h4>
               <p className="mb-2 text-blue-800">
-                <strong>アップロードした画像は、あなたのブラウザにだけ保存されるため、他の人と共有できません。</strong>
+                <strong>パソコンから追加した画像は、あなたのブラウザにだけ保存されるため、他の人と共有できません。</strong>
               </p>
               <p className="text-blue-700">
                 共有したいCASEを作るには、GoogleドライブなどのオンラインURLから画像を追加してください。
@@ -447,7 +447,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
               <p className="text-muted-foreground">
                 {searchQuery || filterUrlOnly
                   ? "条件に一致する画像が見つかりませんでした"
-                  : "画像がありません。「画像をアップロード」ボタンから追加してください。"}
+                  : "画像がありません。「ローカルに画像を保存」ボタンから追加してください。"}
               </p>
             </div>
           ) : (

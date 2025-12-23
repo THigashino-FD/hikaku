@@ -305,8 +305,8 @@ export default function ManagePage() {
                     </h4>
                     <div className="mb-4 space-y-2 text-blue-800">
                       <p>
-                        <strong>【アップロード画像】</strong><br />
-                        パソコンから直接アップロードした画像は、<strong>あなたのブラウザの中だけ</strong>に保存されます。
+                        <strong>【パソコンから追加した画像】</strong><br />
+                        パソコンから追加した画像は、<strong>あなたのブラウザの中だけ</strong>に保存されます。
                         他の人のパソコンには存在しないため、共有リンクを送っても相手は画像を見ることができません。
                       </p>
                       <p>
