@@ -109,7 +109,10 @@
   * {
     @apply border-border outline-ring/50;
   }
-  html, body {
+  html {
+    @apply bg-background text-foreground;
+  }
+  body {
     @apply bg-background text-foreground overflow-x-hidden;
   }
 }
