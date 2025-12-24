@@ -136,3 +136,4 @@ if (oldVersion < 2 && newVersion >= 2) {
 - `components/before-after-slider.tsx` - スライダーコンポーネント
 - `e2e/new-features.spec.ts` - E2Eテスト
 
+

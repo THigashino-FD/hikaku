@@ -135,3 +135,4 @@ npm run dev
 - [Next.js 16.1.0 Release Notes](https://github.com/vercel/next.js/releases/tag/v16.1.0)
 - アップグレード分析レポート: `docs/reports/nextjs-upgrade-analysis.md`
 
+

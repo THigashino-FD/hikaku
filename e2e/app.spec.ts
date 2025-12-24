@@ -204,9 +204,9 @@ test.describe('画像ライブラリ', () => {
     const urlInput = urlSection.locator('input[type="url"]');
     await expect(urlInput).toBeVisible();
     
-    // GyazoのURLを入力（直接画像URL）
-    const gyazoUrl = 'https://i.gyazo.com/599bbdddefff5146507a68056b8fa909.png';
-    await urlInput.fill(gyazoUrl);
+    // 外部ネットワークに依存しないよう、public/samples のURLを使用（確実に取得できる）
+    const localSampleUrl = 'http://localhost:3000/samples/case-01-before.png';
+    await urlInput.fill(localSampleUrl);
     
     // バリデーションメッセージが表示されるまで待つ
     await page.waitForTimeout(500);
@@ -218,23 +218,16 @@ test.describe('画像ライブラリ', () => {
     const addButton = urlSection.getByRole('button', { name: '追加', exact: true });
     await addButton.click();
     
-    // 成功メッセージまたはエラーメッセージが表示されるまで待つ
-    await page.waitForSelector('text=/URLから画像を追加しました|URLからの画像追加に失敗しました/', { timeout: 15000 });
+    // 成功メッセージが表示されるまで待つ
+    await page.waitForSelector('text=/URLから画像を追加しました/', { timeout: 15000 });
     
     // 画像数が増えているか確認（成功した場合）
     await page.waitForTimeout(1000);
     const afterCountText = await page.locator('text=/\\d+ 画像/').textContent();
     const afterCount = afterCountText ? parseInt(afterCountText.match(/\d+/)?.[0] || '0') : 0;
     
-    // 成功した場合は画像数が増えているはず（エラーの場合は変わらない）
-    // 外部URLへのアクセスが失敗する可能性もあるため、成功/失敗の両方を許容
-    if (afterCount > initialCount) {
-      // 成功した場合：追加された画像が表示される
-      expect(afterCount).toBe(initialCount + 1);
-    } else {
-      // エラーが発生した場合でも、エラーメッセージが表示されていることを確認
-      await expect(page.getByText(/URLからの画像追加に失敗しました/)).toBeVisible();
-    }
+    // 成功した場合：画像数が1つ増える
+    expect(afterCount).toBe(initialCount + 1);
   });
 
   test('Google DriveのURLが正しく変換される', async ({ page }) => {

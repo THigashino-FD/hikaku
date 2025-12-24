@@ -111,75 +111,28 @@ export function isAllowedImageType(file: File): boolean {
  * URLから画像を取得してBlobとして返す
  */
 export async function fetchImageFromUrl(url: string): Promise<Blob> {
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:113',message:'fetchImageFromUrl called',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }
-  // #endregion
   try {
-    // #region agent log
-    if (typeof window !== 'undefined') {
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:115',message:'fetch starting',data:{url,mode:'cors',credentials:'omit'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    }
-    // #endregion
     const response = await fetch(url, {
       mode: 'cors',
       credentials: 'omit',
     });
     
-    // #region agent log
-    if (typeof window !== 'undefined') {
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:120',message:'fetch response received',data:{url,status:response.status,statusText:response.statusText,ok:response.ok,contentType:response.headers.get('content-type')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    }
-    // #endregion
-    
     if (!response.ok) {
-      // #region agent log
-      if (typeof window !== 'undefined') {
-        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:122',message:'response not ok',data:{url,status:response.status,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      }
-      // #endregion
       throw new Error(`画像の取得に失敗しました (HTTP ${response.status}): ${response.statusText}`);
     }
     
     const blob = await response.blob();
     
-    // #region agent log
-    if (typeof window !== 'undefined') {
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:128',message:'blob created',data:{url,blobSize:blob.size,blobType:blob.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    }
-    // #endregion
-    
     // 画像形式の確認
     if (!blob.type.startsWith('image/')) {
-      // #region agent log
-      if (typeof window !== 'undefined') {
-        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:131',message:'blob is not image',data:{url,blobType:blob.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      }
-      // #endregion
       throw new Error(`取得したコンテンツは画像ではありません (Content-Type: ${blob.type}). Google Driveの共有ページURLではなく、画像として直接アクセスできるURLを使用してください。`);
     }
     
-    // #region agent log
-    if (typeof window !== 'undefined') {
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:135',message:'fetchImageFromUrl succeeded',data:{url,blobSize:blob.size,blobType:blob.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    }
-    // #endregion
     return blob;
   } catch (error: unknown) {
-    // #region agent log
-    if (typeof window !== 'undefined') {
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:137',message:'fetchImageFromUrl error',data:{url,error:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:'Unknown',isFailedToFetch:error instanceof Error?error.message.includes('Failed to fetch'):false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    }
-    // #endregion
     // ネットワークエラー（CORS含む）の詳細化
     if (error instanceof Error && (error.message.includes('Failed to fetch') || error.name === 'TypeError')) {
       // CORSエラーの場合、APIルート経由で再試行
-      // #region agent log
-      if (typeof window !== 'undefined') {
-        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:141',message:'trying API route fallback',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      }
-      // #endregion
       try {
         const apiResponse = await fetch('/api/fetch-image', {
           method: 'POST',
@@ -200,19 +153,8 @@ export async function fetchImageFromUrl(url: string): Promise<Blob> {
         const response = await fetch(dataUrl);
         const blob = await response.blob();
         
-        // #region agent log
-        if (typeof window !== 'undefined') {
-          fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:158',message:'API route fallback succeeded',data:{url,blobSize:blob.size,blobType:blob.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        }
-        // #endregion
-        
         return blob;
       } catch (apiError) {
-        // #region agent log
-        if (typeof window !== 'undefined') {
-          fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:163',message:'API route fallback failed',data:{url,error:apiError instanceof Error?apiError.message:String(apiError)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        }
-        // #endregion
         throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）制約、またはネットワークエラーの可能性があります。Google Driveを使用している場合は、共有設定を「リンクを知っている全員」にして、直接ダウンロード用のURLを使用してください。');
       }
     }
@@ -240,37 +182,15 @@ export async function fetchAndResizeImage(
   height: number;
   type: string;
 }> {
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:151',message:'fetchAndResizeImage called',data:{url,maxDimension,quality},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }
-  // #endregion
   // URLから画像を取得
   const originalBlob = await fetchImageFromUrl(url);
-  
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:163',message:'originalBlob received',data:{url,blobSize:originalBlob.size,blobType:originalBlob.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }
-  // #endregion
   
   // BlobからFileを作成（resizeImage関数がFile型を期待しているため）
   const filename = url.split('/').pop() || 'image.jpg';
   const file = blobToFile(originalBlob, filename);
   
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:168',message:'calling resizeImage',data:{url,filename,fileType:file.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }
-  // #endregion
   // リサイズ処理
   const result = await resizeImage(file, maxDimension, quality);
-  
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:171',message:'fetchAndResizeImage succeeded',data:{url,width:result.width,height:result.height,blobSize:result.blob.size,type:file.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-  }
-  // #endregion
   
   return {
     ...result,

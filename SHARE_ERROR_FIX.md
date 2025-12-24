@@ -109,3 +109,4 @@ throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）�
 - `lib/image-utils.ts` - fetchエラーメッセージの詳細化
 - `components/before-after-slider.tsx` - Input要素のUX改善（全選択）
 
+

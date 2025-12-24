@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
-import Image from "next/image"
+import { SafeImage } from "@/components/safe-image"
 import { useToast } from "@/components/ui/toast"
 
 interface BeforeAfterSliderProps {
@@ -624,7 +624,7 @@ export function BeforeAfterSlider({
                 </svg>
               </div>
             )}
-            <Image
+            <SafeImage
               key={beforeImageKey}
               src={displayBeforeImage || "/placeholder.svg"}
               alt={beforeLabel}
@@ -658,7 +658,7 @@ export function BeforeAfterSlider({
                 </svg>
               </div>
             )}
-            <Image
+            <SafeImage
               key={afterImageKey}
               src={displayAfterImage || "/placeholder.svg"}
               alt={afterLabel}
@@ -722,7 +722,7 @@ export function BeforeAfterSlider({
                 </svg>
               </div>
             )}
-            <Image
+            <SafeImage
               key={`${beforeImageKey}-side`}
               src={displayBeforeImage || "/placeholder.svg"}
               alt={beforeLabel}
@@ -754,7 +754,7 @@ export function BeforeAfterSlider({
                 </svg>
               </div>
             )}
-            <Image
+            <SafeImage
               key={`${afterImageKey}-side`}
               src={displayAfterImage || "/placeholder.svg"}
               alt={afterLabel}

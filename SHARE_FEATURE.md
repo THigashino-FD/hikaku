@@ -104,3 +104,4 @@ https://your-domain/#share=BASE64_ENCODED_DATA
 - **サーバレス**: 画像自体はリンクに含まれず、URLのみが共有されます
 - **ブラウザ依存**: IndexedDBとクリップボードAPIを使用するため、古いブラウザでは動作しない可能性があります
 
+
