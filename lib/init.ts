@@ -91,18 +91,13 @@ async function setupDefaultImage(
 export async function setupDefaultCases(): Promise<void> {
   // ブラウザ環境でのみ実行
   if (typeof window === 'undefined') {
-    console.log('Skipping default cases setup (not in browser)');
     return;
   }
 
   try {
     // 既にセットアップ済みかチェック
     const isSetup = await getAppConfig('defaultCasesSetup');
-    if (isSetup) {
-      console.log('Default cases already setup');
-      return;
-    }
-
+    
     // 既存のCASEがあるかチェック（WebKitでのタイミング問題を回避するため、リトライ付き）
     let existingCases: CaseRecord[] = [];
     let retryCount = 0;
@@ -122,19 +117,27 @@ export async function setupDefaultCases(): Promise<void> {
       }
     }
     
+    // 既存CASEがある場合はスキップ（ただし、フラグが設定されていない場合は設定する）
     if (existingCases.length > 0) {
-      console.log('Cases already exist, skipping default setup');
-      await setAppConfig('defaultCasesSetup', true);
-      // WebKitでのトランザクション完了を確実にするため、少し待機
-      await new Promise(resolve => setTimeout(resolve, 100));
+      if (!isSetup) {
+        await setAppConfig('defaultCasesSetup', true);
+        // WebKitでのトランザクション完了を確実にするため、少し待機
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       return;
     }
-
-    console.log('Setting up default cases...');
+    
+    // フラグが設定されているがCASEが存在しない場合は、フラグをリセットして再セットアップ
+    if (isSetup && existingCases.length === 0) {
+      console.warn('[INIT] defaultCasesSetup flag is set but no cases exist, resetting flag and setting up...');
+      await setAppConfig('defaultCasesSetup', false);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
 
     const safeSetup = async (path: string, name: string) => {
       try {
-        return await setupDefaultImage(path, name);
+        const imageId = await setupDefaultImage(path, name);
+        return imageId;
       } catch (e) {
         console.error(`[INIT] Failed to setup ${path}:`, e);
         return undefined;
@@ -147,6 +150,19 @@ export async function setupDefaultCases(): Promise<void> {
     const afterImage2Id = await safeSetup('/samples/case-02-after.jpg', 'case-02-after.jpg');
     const beforeImage3Id = await safeSetup('/samples/case-03-before.png', 'case-03-before.png');
     const afterImage3Id = await safeSetup('/samples/case-03-after.png', 'case-03-after.png');
+    
+    // 画像のセットアップに失敗した場合は警告
+    const failedImages: string[] = [];
+    if (!beforeImage1Id) failedImages.push('case-01-before.png');
+    if (!afterImage1Id) failedImages.push('case-01-after.jpg');
+    if (!beforeImage2Id) failedImages.push('case-02-before.png');
+    if (!afterImage2Id) failedImages.push('case-02-after.jpg');
+    if (!beforeImage3Id) failedImages.push('case-03-before.png');
+    if (!afterImage3Id) failedImages.push('case-03-after.png');
+    
+    if (failedImages.length > 0) {
+      console.warn(`[INIT] Failed to setup ${failedImages.length} images:`, failedImages);
+    }
 
     // CASE 01を作成
     const case1: CaseRecord = {
@@ -212,15 +228,28 @@ export async function setupDefaultCases(): Promise<void> {
       }
     };
 
-    await saveAndVerify(case1);
-    await saveAndVerify(case2);
-    await saveAndVerify(case3);
+    // 画像が存在する場合のみCASEを作成
+    if (beforeImage1Id && afterImage1Id) {
+      await saveAndVerify(case1);
+    } else {
+      console.warn('[INIT] Skipping CASE 01 due to missing images');
+    }
+    
+    if (beforeImage2Id && afterImage2Id) {
+      await saveAndVerify(case2);
+    } else {
+      console.warn('[INIT] Skipping CASE 02 due to missing images');
+    }
+    
+    if (beforeImage3Id && afterImage3Id) {
+      await saveAndVerify(case3);
+    } else {
+      console.warn('[INIT] Skipping CASE 03 due to missing images');
+    }
 
     // セットアップ完了フラグを保存
     await setAppConfig('defaultCasesSetup', true);
     await new Promise(resolve => setTimeout(resolve, 100));
-
-    console.log('Default cases setup completed');
   } catch (error) {
     console.error('Failed to setup default cases:', error);
     throw error;
@@ -232,71 +261,88 @@ export async function setupDefaultCases(): Promise<void> {
  */
 export async function initializeApp(): Promise<void> {
   // 同一セッション内の多重実行を避ける（ページ遷移/再描画/保存後の再読み込みなど）
-  if (initializeAppState.done) return;
-  if (initializeAppState.inFlight) return initializeAppState.inFlight;
+  if (initializeAppState.done) {
+    // 既に初期化済みでも、CASEが存在しない場合は再実行
+    try {
+      const existingCases = await getAllCases();
+      if (existingCases.length === 0) {
+        initializeAppState.done = false;
+        initializeAppState.inFlight = null;
+      } else {
+        return;
+      }
+    } catch (error) {
+      console.error('[INIT] Error checking existing cases:', error);
+      // エラーが発生した場合は再試行
+      initializeAppState.done = false;
+      initializeAppState.inFlight = null;
+    }
+  }
+  
+  if (initializeAppState.inFlight) {
+    return initializeAppState.inFlight;
+  }
 
   initializeAppState.inFlight = (async () => {
     let setupOk = false;
 
-  // WebKitでのIndexedDBの準備を待つ
-  if (typeof window !== 'undefined') {
-    try {
-      if (!('indexedDB' in window)) {
-        console.error('[INIT] IndexedDB is not available');
-        return;
+    // WebKitでのIndexedDBの準備を待つ
+    if (typeof window !== 'undefined') {
+      try {
+        if (!('indexedDB' in window)) {
+          console.error('[INIT] IndexedDB is not available');
+          return;
+        }
+        
+        let dbReady = false;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (!dbReady && retryCount < maxRetries) {
+          try {
+            await getDB();
+            dbReady = true;
+          } catch (dbError) {
+            retryCount++;
+            if (retryCount >= maxRetries) throw dbError;
+            await sleep(200 * retryCount);
+          }
+        }
+      } catch (dbError) {
+        console.error('[INIT] Failed to initialize database:', dbError);
       }
+    }
+  
+    try {
+      await setupDefaultCases();
+      setupOk = true;
+    } catch (error) {
+      console.error('Failed to initialize app:', error);
       
-      let dbReady = false;
-      let retryCount = 0;
-      const maxRetries = 3;
+      // WebKitでのIndexedDBエラーの場合、リトライ
+      const isIndexedDBError = error instanceof Error && (
+        error.message.includes('IndexedDB') || 
+        error.message.includes('database') ||
+        error.name === 'UnknownError' ||
+        error.name === 'QuotaExceededError' ||
+        error.message.includes('quota') ||
+        error.message.includes('Blob')
+      );
       
-      while (!dbReady && retryCount < maxRetries) {
+      if (isIndexedDBError) {
+        await sleep(1000);
         try {
-          await getDB();
-          dbReady = true;
-        } catch (dbError) {
-          retryCount++;
-          if (retryCount >= maxRetries) throw dbError;
-          await sleep(200 * retryCount);
+          const { resetDBInstance } = await import('./db');
+          resetDBInstance();
+          await setupDefaultCases();
+          setupOk = true;
+        } catch (retryError) {
+          console.error('[INIT] Retry also failed:', retryError);
         }
       }
-    } catch (dbError) {
-      console.error('[INIT] Failed to initialize database:', dbError);
+      
+      console.warn('[INIT] Continuing despite initialization error');
     }
-  }
-  
-  try {
-    await setupDefaultCases();
-    setupOk = true;
-  } catch (error) {
-    console.error('Failed to initialize app:', error);
-    
-    // WebKitでのIndexedDBエラーの場合、リトライ
-    const isIndexedDBError = error instanceof Error && (
-      error.message.includes('IndexedDB') || 
-      error.message.includes('database') ||
-      error.name === 'UnknownError' ||
-      error.name === 'QuotaExceededError' ||
-      error.message.includes('quota') ||
-      error.message.includes('Blob')
-    );
-    
-    if (isIndexedDBError) {
-      console.log('[INIT] IndexedDB error detected, retrying after 1000ms...');
-      await sleep(1000);
-      try {
-        const { resetDBInstance } = await import('./db');
-        resetDBInstance();
-        await setupDefaultCases();
-        console.log('[INIT] Retry successful');
-        setupOk = true;
-      } catch (retryError) {
-        console.error('[INIT] Retry also failed:', retryError);
-      }
-    }
-    
-    console.warn('[INIT] Continuing despite initialization error');
-  }
 
     // 初期化が成功した場合のみ「done」として固定し、失敗時は次回呼び出しで再試行できるようにする
     if (setupOk) {

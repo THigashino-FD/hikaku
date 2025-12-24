@@ -61,7 +61,7 @@ interface HikakuDB extends DBSchema {
 }
 
 const DB_NAME = 'hikaku-editor';
-const DB_VERSION = 2; // 初期位置・アニメ種別追加のため更新
+const DB_VERSION = 4; // 既存データベースのバージョンに合わせて更新
 
 let dbInstance: IDBPDatabase<HikakuDB> | null = null;
 
