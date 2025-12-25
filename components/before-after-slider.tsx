@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
@@ -234,11 +234,11 @@ export function BeforeAfterSlider({
     }
   }, [])
 
-  const handleMove = (clientX: number) => {
+  const handleMove = useCallback((clientX: number) => {
     if (!containerRef.current) return
 
-    // アニメーション中の場合は中断
-    if (isAnimating) {
+    // アニメーション中の場合は中断（refを使って判定）
+    if (isAnimatingRef.current) {
       cancelAnimation()
     }
 
@@ -247,47 +247,45 @@ export function BeforeAfterSlider({
     const percentage = (x / rect.width) * 100
 
     setSliderPosition(Math.min(Math.max(percentage, 0), 100))
-  }
+  }, [])
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
-      handleMove(e.clientX)
-    }
-  }
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (isDragging && e.touches[0]) {
-      handleMove(e.touches[0].clientX)
-    }
-  }
-
-  const handleStart = () => {
-    // アニメーション中の場合は中断
-    if (isAnimating) {
+  const handleStart = useCallback(() => {
+    // アニメーション中の場合は中断（refを使って判定）
+    if (isAnimatingRef.current) {
       cancelAnimation()
     }
     setIsDragging(true)
-  }
+  }, [])
 
-  const handleEnd = () => {
+  const handleEnd = useCallback(() => {
     setIsDragging(false)
-  }
+  }, [])
 
   useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove)
-      window.addEventListener("mouseup", handleEnd)
-      window.addEventListener("touchmove", handleTouchMove)
-      window.addEventListener("touchend", handleEnd)
+    if (!isDragging) return
+
+    const onMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX)
     }
 
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        handleMove(e.touches[0].clientX)
+      }
+    }
+
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup", handleEnd)
+    window.addEventListener("touchmove", onTouchMove)
+    window.addEventListener("touchend", handleEnd)
+
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mousemove", onMouseMove)
       window.removeEventListener("mouseup", handleEnd)
-      window.removeEventListener("touchmove", handleTouchMove)
+      window.removeEventListener("touchmove", onTouchMove)
       window.removeEventListener("touchend", handleEnd)
     }
-  }, [isDragging])
+  }, [isDragging, handleMove, handleEnd])
 
   const resetAdjustments = () => {
     setBeforeScale(defaultBeforeScale)
@@ -609,8 +607,8 @@ export function BeforeAfterSlider({
           className={cn("relative w-full overflow-hidden rounded-xl select-none", className)}
           style={{ aspectRatio: "16/9" }}
           onClick={() => {
-            // クリックでアニメーション中断
-            if (isAnimating) {
+            // クリックでアニメーション中断（refを使って判定）
+            if (isAnimatingRef.current) {
               cancelAnimation()
             }
           }}

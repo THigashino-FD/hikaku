@@ -36,7 +36,7 @@ async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; 
     
     try {
       url = URL.createObjectURL(blob);
-    } catch (e) {
+    } catch {
       reject(new Error('Failed to create object URL'));
       return;
     }

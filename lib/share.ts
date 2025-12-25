@@ -37,8 +37,7 @@ export function encodeSharedCase(data: SharedCaseData): string {
     const base64 = btoa(binaryString)
     // URL-safe Base64に変換（+ を - に、/ を _ に置き換え、末尾の = を削除）
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  } catch (error) {
-    console.error('Failed to encode shared case:', error)
+  } catch {
     throw new Error('共有リンクの生成に失敗しました')
   }
 }
@@ -80,8 +79,7 @@ export function decodeSharedCase(encoded: string): SharedCaseData | null {
     }
     
     return data
-  } catch (error) {
-    console.error('Failed to decode shared case:', error)
+  } catch {
     return null
   }
 }
@@ -126,7 +124,7 @@ export function convertGoogleDriveUrl(url: string): string {
     }
     
     return url
-  } catch (error) {
+  } catch {
     return url
   }
 }

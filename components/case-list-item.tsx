@@ -87,7 +87,12 @@ export function CaseListItem({
   }, [caseRecord.beforeImageId, caseRecord.afterImageId])
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:gap-4">
+    <div 
+      className="flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:gap-4"
+      data-testid="manage-case-card"
+      data-case-id={caseRecord.id}
+      data-case-title={caseRecord.title}
+    >
       {/* Order Controls - hidden on mobile */}
       <div className="hidden sm:flex flex-col gap-1">
         <Button
@@ -96,6 +101,8 @@ export function CaseListItem({
           onClick={onMoveUp}
           disabled={index === 0}
           className="h-6 w-6 p-0"
+          data-testid="manage-case-move-up"
+          aria-label="上へ移動"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -107,6 +114,8 @@ export function CaseListItem({
           onClick={onMoveDown}
           disabled={index === totalCount - 1}
           className="h-6 w-6 p-0"
+          data-testid="manage-case-move-down"
+          aria-label="下へ移動"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -199,7 +208,14 @@ export function CaseListItem({
 
       {/* Actions - responsive layout */}
       <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-        <Button variant="outline" size="sm" onClick={onShare} className="gap-1 flex-1 sm:flex-none">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onShare} 
+          className="gap-1 flex-1 sm:flex-none"
+          data-testid="manage-case-share"
+          aria-label="共有"
+        >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -210,13 +226,34 @@ export function CaseListItem({
           </svg>
           <span className="sm:inline">共有</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={onEdit} className="flex-1 sm:flex-none">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onEdit} 
+          className="flex-1 sm:flex-none"
+          data-testid="manage-case-edit"
+          aria-label="編集"
+        >
           編集
         </Button>
-        <Button variant="outline" size="sm" onClick={onDuplicate} className="flex-1 sm:flex-none">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onDuplicate} 
+          className="flex-1 sm:flex-none"
+          data-testid="manage-case-duplicate"
+          aria-label="複製"
+        >
           複製
         </Button>
-        <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive flex-1 sm:flex-none">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onDelete} 
+          className="text-destructive flex-1 sm:flex-none"
+          data-testid="manage-case-delete"
+          aria-label="削除"
+        >
           削除
         </Button>
       </div>

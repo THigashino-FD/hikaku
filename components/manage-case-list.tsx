@@ -465,7 +465,7 @@ export function ManageCaseList({ dataPromise }: ManageCaseListProps) {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3" data-testid="manage-case-list">
             {optimisticCases.map((caseRecord, index) => (
               <CaseListItem
                 key={caseRecord.id}

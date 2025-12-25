@@ -150,7 +150,7 @@ export async function fetchImageFromUrl(url: string): Promise<Blob> {
         const blob = await response.blob()
         
         return blob
-      } catch (apiError) {
+      } catch {
         throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）制約、またはネットワークエラーの可能性があります。Google Driveを使用している場合は、共有設定を「リンクを知っている全員」にして、直接ダウンロード用のURLを使用してください。')
       }
     }

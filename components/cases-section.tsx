@@ -112,8 +112,11 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
   }, [shareHash])
 
   // 共有プレビュー用に、外部URLをBlob化して表示（DriveのHTML/リダイレクト等で <img> が失敗するケースの回避）
+  const beforeUrl = sharedCase?.beforeUrl ?? null
+  const afterUrl = sharedCase?.afterUrl ?? null
+
   useEffect(() => {
-    if (!sharedCase) {
+    if (!beforeUrl || !afterUrl) {
       if (sharePreviewBeforeRef.current) revokeObjectURL(sharePreviewBeforeRef.current)
       if (sharePreviewAfterRef.current) revokeObjectURL(sharePreviewAfterRef.current)
       sharePreviewBeforeRef.current = ""
@@ -131,8 +134,8 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       setSharePreviewAfter("")
 
       try {
-        const normalizedBefore = convertGoogleDriveUrl(sharedCase.beforeUrl)
-        const normalizedAfter = convertGoogleDriveUrl(sharedCase.afterUrl)
+        const normalizedBefore = convertGoogleDriveUrl(beforeUrl)
+        const normalizedAfter = convertGoogleDriveUrl(afterUrl)
 
         const [beforeBlob, afterBlob] = await Promise.all([
           fetchImageFromUrl(normalizedBefore),
@@ -167,8 +170,7 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       sharePreviewBeforeRef.current = ""
       sharePreviewAfterRef.current = ""
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sharedCaseの切り替えに追従（URL文字列が変われば再取得）
-  }, [sharedCase?.beforeUrl, sharedCase?.afterUrl])
+  }, [beforeUrl, afterUrl])
 
   const closeSharePreview = () => {
     if (typeof window === "undefined") return

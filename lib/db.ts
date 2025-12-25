@@ -102,7 +102,7 @@ export async function getDB(): Promise<IDBPDatabase<HikakuDB>> {
       testDB.onsuccess = () => {
         indexedDB.deleteDatabase('__test_db__');
       };
-    } catch (e) {
+    } catch {
       // IndexedDBが利用できない場合
       throw new Error('IndexedDB is not available in this browser');
     }

@@ -26,27 +26,43 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   const [editedCase, setEditedCase] = useState<CaseRecord>(caseRecord)
   const [beforeImageUrl, setBeforeImageUrl] = useState<string>("")
   const [afterImageUrl, setAfterImageUrl] = useState<string>("")
+  const beforeUrlRef = useRef<string>("")
+  const afterUrlRef = useRef<string>("")
   const { showToast } = useToast()
 
   useEffect(() => {
+    let cancelled = false
+
     const loadImages = async () => {
+      // 前回のURLをクリーンアップ
+      if (beforeUrlRef.current) {
+        revokeObjectURL(beforeUrlRef.current)
+        beforeUrlRef.current = ""
+      }
+      if (afterUrlRef.current) {
+        revokeObjectURL(afterUrlRef.current)
+        afterUrlRef.current = ""
+      }
+
       if (editedCase.beforeImageId) {
         const image = await getImageById(editedCase.beforeImageId)
-        if (image) {
+        if (image && !cancelled) {
           const url = createObjectURL(image.blob)
+          beforeUrlRef.current = url
           setBeforeImageUrl(url)
         }
-      } else {
+      } else if (!cancelled) {
         setBeforeImageUrl("")
       }
 
       if (editedCase.afterImageId) {
         const image = await getImageById(editedCase.afterImageId)
-        if (image) {
+        if (image && !cancelled) {
           const url = createObjectURL(image.blob)
+          afterUrlRef.current = url
           setAfterImageUrl(url)
         }
-      } else {
+      } else if (!cancelled) {
         setAfterImageUrl("")
       }
     }
@@ -54,8 +70,11 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
     loadImages()
 
     return () => {
-      if (beforeImageUrl) revokeObjectURL(beforeImageUrl)
-      if (afterImageUrl) revokeObjectURL(afterImageUrl)
+      cancelled = true
+      if (beforeUrlRef.current) revokeObjectURL(beforeUrlRef.current)
+      if (afterUrlRef.current) revokeObjectURL(afterUrlRef.current)
+      beforeUrlRef.current = ""
+      afterUrlRef.current = ""
     }
   }, [editedCase.beforeImageId, editedCase.afterImageId])
 
