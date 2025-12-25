@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // 外部URLを扱うコンポーネントでは意図的に<img>タグを使用
+  {
+    files: ["components/safe-image.tsx", "components/image-library.tsx"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

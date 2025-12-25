@@ -67,23 +67,3 @@ export async function loadManageData(): Promise<{
   }
 }
 
-/**
- * データ取得用のPromiseを作成（use()フック用）
- * クライアントサイドでのみ実行可能
- */
-export function createCasesDataPromise(): Promise<CaseRecord[]> {
-  return loadCasesData()
-}
-
-/**
- * 管理ページデータ取得用のPromiseを作成（use()フック用）
- * クライアントサイドでのみ実行可能
- */
-export function createManageDataPromise(): Promise<{
-  cases: CaseRecord[]
-  images: ImageRecordWithBlob[]
-  shareableStatus: Record<string, boolean>
-}> {
-  return loadManageData()
-}
-

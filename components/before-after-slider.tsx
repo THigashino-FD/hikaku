@@ -69,7 +69,6 @@ export function BeforeAfterSlider({
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(initialComparisonMode)
   const [beforeImageLoaded, setBeforeImageLoaded] = useState(false)
   const [afterImageLoaded, setAfterImageLoaded] = useState(false)
-  const [isAnimating, setIsAnimating] = useState(false)
   const [animationCancelled, setAnimationCancelled] = useState(false)
   const [panelMode, setPanelMode] = useState<"none" | "adjust">("none")
   
@@ -111,7 +110,6 @@ export function BeforeAfterSlider({
       animationFrameRef.current = null
     }
     isAnimatingRef.current = false
-    setIsAnimating(false)
     setAnimationCancelled(true)
   }
 
@@ -186,15 +184,12 @@ export function BeforeAfterSlider({
       } else {
         setSliderPosition(basePos)
         isAnimatingRef.current = false
-        setIsAnimating(false)
       }
     }
 
     // 画像が両方読み込まれてからアニメーション開始
     if (beforeImageLoaded && afterImageLoaded) {
       isAnimatingRef.current = true
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- アニメーション開始をUIに反映
-      setIsAnimating(true)
       animationFrameRef.current = requestAnimationFrame(animate)
     }
 

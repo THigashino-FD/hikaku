@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { BeforeAfterSlider } from "@/components/before-after-slider"
 import { CaseViewer } from "@/components/case-viewer"
 import { Button } from "@/components/ui/button"
@@ -41,7 +41,7 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
     return withRetry(() => getAllCases())
   }
 
-  const loadCases = async () => {
+  const loadCases = useCallback(async () => {
     setIsLoading(true)
     try {
       // 初回起動時にデフォルトCASEをセットアップ
@@ -55,11 +55,11 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadCases()
-  }, [])
+  }, [loadCases])
 
   // 共有リンク（#share=...）の読み取り
   useEffect(() => {
