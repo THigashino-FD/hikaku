@@ -132,33 +132,29 @@ export async function fetchImageFromUrl(url: string): Promise<Blob> {
   } catch (error: unknown) {
     // ネットワークエラー（CORS含む）の詳細化
     if (error instanceof Error && (error.message.includes('Failed to fetch') || error.name === 'TypeError')) {
-      // CORSエラーの場合、APIルート経由で再試行
+      // CORSエラーの場合、Server Action経由で再試行
       try {
-        const apiResponse = await fetch('/api/fetch-image', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ url }),
-        });
+        const { fetchImageAction } = await import('@/app/actions/fetch-image')
+        const result = await fetchImageAction(url)
 
-        if (!apiResponse.ok) {
-          const errorData = await apiResponse.json();
-          throw new Error(errorData.error || '画像の取得に失敗しました');
+        if (result.error) {
+          throw new Error(result.error)
         }
 
-        const { dataUrl, contentType } = await apiResponse.json();
+        if (!result.dataUrl) {
+          throw new Error('画像の取得に失敗しました')
+        }
         
         // Data URLからBlobに変換
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
+        const response = await fetch(result.dataUrl)
+        const blob = await response.blob()
         
-        return blob;
+        return blob
       } catch (apiError) {
-        throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）制約、またはネットワークエラーの可能性があります。Google Driveを使用している場合は、共有設定を「リンクを知っている全員」にして、直接ダウンロード用のURLを使用してください。');
+        throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）制約、またはネットワークエラーの可能性があります。Google Driveを使用している場合は、共有設定を「リンクを知っている全員」にして、直接ダウンロード用のURLを使用してください。')
       }
     }
-    throw error;
+    throw error
   }
 }
 

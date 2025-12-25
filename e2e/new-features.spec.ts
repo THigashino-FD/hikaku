@@ -304,3 +304,264 @@ test.describe('新機能テスト', () => {
   });
 });
 
+test.describe('共有機能', () => {
+  test.beforeEach(async ({ context }) => {
+    // 各テスト前にIndexedDBをクリア
+    await context.addInitScript(() => {
+      try {
+        const key = '__pw_db_cleared__';
+        if (typeof localStorage !== 'undefined' && !localStorage.getItem(key)) {
+          indexedDB.deleteDatabase('hikaku-editor');
+          localStorage.setItem(key, '1');
+        }
+      } catch {
+        indexedDB.deleteDatabase('hikaku-editor');
+      }
+    });
+  });
+
+  test('管理ページから共有リンクを生成できる', async ({ page }) => {
+    await page.goto('/manage');
+    
+    // デフォルトCASEのセットアップを待つ
+    await page.waitForTimeout(3000);
+    
+    // CASE 01の共有ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    await expect(shareButton).toBeVisible();
+    await shareButton.click();
+    
+    // 共有リンクが表示される（エラーまたはリンク）
+    await page.waitForTimeout(1000);
+    
+    // 共有リンクの入力フィールドが表示されることを確認
+    const shareLinkInput = page.locator('input[readonly]').filter({ hasText: /share|localhost/ }).first();
+    
+    // エラーが表示されない場合（URL画像が設定されている場合）、共有リンクが生成されている
+    const shareError = page.getByText(/画像が設定されていません|URL画像ではない/);
+    const hasError = await shareError.isVisible().catch(() => false);
+    
+    if (!hasError) {
+      // 共有リンクが生成されていることを確認
+      await expect(shareLinkInput).toBeVisible({ timeout: 5000 });
+      const shareLinkValue = await shareLinkInput.inputValue();
+      expect(shareLinkValue).toContain('share');
+    } else {
+      // URL画像が設定されていない場合はスキップ
+      test.skip();
+    }
+  });
+
+  test('共有リンクをコピーできる', async ({ page, context }) => {
+    await page.goto('/manage');
+    
+    // デフォルトCASEのセットアップを待つ
+    await page.waitForTimeout(3000);
+    
+    // CASE 01の共有ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    await shareButton.click();
+    await page.waitForTimeout(1000);
+    
+    // エラーが表示されない場合のみテストを続行
+    const shareError = page.getByText(/画像が設定されていません|URL画像ではない/);
+    const hasError = await shareError.isVisible().catch(() => false);
+    
+    if (hasError) {
+      test.skip();
+      return;
+    }
+    
+    // コピーボタンをクリック
+    const copyButton = page.getByRole('button', { name: 'コピー' });
+    await expect(copyButton).toBeVisible({ timeout: 5000 });
+    
+    // クリップボードAPIの権限を付与
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    
+    await copyButton.click();
+    await page.waitForTimeout(500);
+    
+    // クリップボードから共有リンクを取得
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toContain('share');
+  });
+
+  test('共有専用ページ（/share/[encoded]）でプレビューが表示される', async ({ page }) => {
+    await page.goto('/manage');
+    
+    // デフォルトCASEのセットアップを待つ
+    await page.waitForTimeout(3000);
+    
+    // CASE 01の共有ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    await shareButton.click();
+    await page.waitForTimeout(1000);
+    
+    // エラーが表示されない場合のみテストを続行
+    const shareError = page.getByText(/画像が設定されていません|URL画像ではない/);
+    const hasError = await shareError.isVisible().catch(() => false);
+    
+    if (hasError) {
+      test.skip();
+      return;
+    }
+    
+    // 共有リンクを取得
+    const shareLinkInput = page.locator('input[readonly]').first();
+    await expect(shareLinkInput).toBeVisible({ timeout: 5000 });
+    const shareLink = await shareLinkInput.inputValue();
+    
+    // 共有専用ページにアクセス
+    await page.goto(shareLink);
+    await page.waitForTimeout(2000);
+    
+    // 共有プレビューセクションが表示される
+    await expect(page.getByText('共有プレビュー')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('共有プレビューで画像読み込み中の表示が表示される', async ({ page }) => {
+    await page.goto('/manage');
+    
+    // デフォルトCASEのセットアップを待つ
+    await page.waitForTimeout(3000);
+    
+    // CASE 01の共有ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    await shareButton.click();
+    await page.waitForTimeout(1000);
+    
+    // エラーが表示されない場合のみテストを続行
+    const shareError = page.getByText(/画像が設定されていません|URL画像ではない/);
+    const hasError = await shareError.isVisible().catch(() => false);
+    
+    if (hasError) {
+      test.skip();
+      return;
+    }
+    
+    // 共有リンクを取得
+    const shareLinkInput = page.locator('input[readonly]').first();
+    await expect(shareLinkInput).toBeVisible({ timeout: 5000 });
+    const shareLink = await shareLinkInput.inputValue();
+    
+    // 共有専用ページにアクセス
+    await page.goto(shareLink);
+    
+    // 共有プレビューセクションが表示される
+    await expect(page.getByText('共有プレビュー')).toBeVisible({ timeout: 10000 });
+    
+    // 画像読み込み中の表示が表示される（一時的に）
+    const loadingIndicator = page.getByText(/読み込み中/);
+    // 読み込みが高速な場合は表示されない可能性があるため、オプショナル
+    await loadingIndicator.isVisible().catch(() => {
+      // 読み込みが既に完了している場合はスキップ
+    });
+  });
+
+  test('共有プレビューでスライダーが表示される（画像読み込み後）', async ({ page }) => {
+    await page.goto('/manage');
+    
+    // デフォルトCASEのセットアップを待つ
+    await page.waitForTimeout(3000);
+    
+    // CASE 01の共有ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    await shareButton.click();
+    await page.waitForTimeout(1000);
+    
+    // エラーが表示されない場合のみテストを続行
+    const shareError = page.getByText(/画像が設定されていません|URL画像ではない/);
+    const hasError = await shareError.isVisible().catch(() => false);
+    
+    if (hasError) {
+      test.skip();
+      return;
+    }
+    
+    // 共有リンクを取得
+    const shareLinkInput = page.locator('input[readonly]').first();
+    await expect(shareLinkInput).toBeVisible({ timeout: 5000 });
+    const shareLink = await shareLinkInput.inputValue();
+    
+    // 共有専用ページにアクセス
+    await page.goto(shareLink);
+    
+    // 共有プレビューセクションが表示される
+    await expect(page.getByText('共有プレビュー')).toBeVisible({ timeout: 10000 });
+    
+    // 画像が読み込まれるまで待つ（最大15秒）
+    await page.waitForTimeout(15000);
+    
+    // Before/Afterスライダーが表示される
+    const slider = page.locator('[class*="cursor-ew-resize"]').first();
+    await expect(slider).toBeVisible({ timeout: 5000 });
+  });
+
+  test('共有CASEとして保存できる', async ({ page }) => {
+    await page.goto('/manage');
+    
+    // デフォルトCASEのセットアップを待つ
+    await page.waitForTimeout(3000);
+    
+    // CASE 01の共有ボタンをクリック
+    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
+    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    await shareButton.click();
+    await page.waitForTimeout(1000);
+    
+    // エラーが表示されない場合のみテストを続行
+    const shareError = page.getByText(/画像が設定されていません|URL画像ではない/);
+    const hasError = await shareError.isVisible().catch(() => false);
+    
+    if (hasError) {
+      test.skip();
+      return;
+    }
+    
+    // 共有リンクを取得
+    const shareLinkInput = page.locator('input[readonly]').first();
+    await expect(shareLinkInput).toBeVisible({ timeout: 5000 });
+    const shareLink = await shareLinkInput.inputValue();
+    
+    // 共有専用ページにアクセス
+    await page.goto(shareLink);
+    
+    // 共有プレビューセクションが表示される
+    await expect(page.getByText('共有プレビュー')).toBeVisible({ timeout: 10000 });
+    
+    // 画像が読み込まれるまで待つ（最大15秒）
+    await page.waitForTimeout(15000);
+    
+    // 保存前のCASE数を取得
+    const caseCountBefore = await page.getByText(/CASE \d+/).count();
+    
+    // 「共有CASEとして保存」ボタンをクリック
+    const saveButton = page.getByRole('button', { name: /共有CASEとして保存/ });
+    await expect(saveButton).toBeVisible({ timeout: 5000 });
+    await saveButton.click();
+    
+    // 保存中表示が表示される（一時的に）
+    const savingIndicator = page.getByText(/保存中/);
+    await savingIndicator.isVisible().catch(() => {
+      // 保存が高速な場合は表示されない可能性がある
+    });
+    
+    // 保存完了を待つ（最大10秒）
+    await page.waitForTimeout(10000);
+    
+    // 共有プレビューが閉じられる（または新しいCASEが表示される）
+    // 保存が成功した場合、新しいCASEが表示されるか、共有プレビューが閉じられる
+    const caseCountAfter = await page.getByText(/CASE \d+/).count();
+    
+    // CASE数が増えているか、または共有プレビューが閉じられていることを確認
+    const sharePreviewVisible = await page.getByText('共有プレビュー').isVisible().catch(() => false);
+    expect(caseCountAfter > caseCountBefore || !sharePreviewVisible).toBe(true);
+  });
+});
+

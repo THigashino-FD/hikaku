@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  // Partial Prerendering (PPR) はNext.js 16.1.0では実験的機能のため、
+  // 代わりにSuspenseを使用してストリーミングを実装
+  // 静的コンテンツ（Header, Footer, ToolDescription）はビルド時に生成され、
+  // 動的コンテンツ（CasesSection）はSuspenseでストリーミング配信される
 };
 
 export default nextConfig;

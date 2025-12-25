@@ -1,100 +1,57 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+/**
+ * Suspense対応のCASE一覧コンポーネント
+ * React 19のuse()フックを使ってデータを取得
+ */
+
+import { use, useState, useEffect } from "react"
 import { BeforeAfterSlider } from "@/components/before-after-slider"
 import { CaseViewer } from "@/components/case-viewer"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import {
-  getAllCases,
   addImage,
   addCase,
   updateCase,
   CaseRecord,
   ImageRecord,
-  createObjectURL,
-  revokeObjectURL,
 } from "@/lib/db"
-import { initializeApp } from "@/lib/init"
-import { isWebKitBrowser, sleep } from "@/lib/browser"
-import { getSharedCaseFromUrl, decodeSharedCase, convertGoogleDriveUrl, type SharedCaseData } from "@/lib/share"
-import { fetchAndResizeImage, fetchImageFromUrl } from "@/lib/image-utils"
+import { getSharedCaseFromUrl, convertGoogleDriveUrl, type SharedCaseData } from "@/lib/share"
+import { fetchAndResizeImage } from "@/lib/image-utils"
 import { v4 as uuidv4 } from "uuid"
+import { dataCache } from "@/lib/data-cache"
 
-interface CasesSectionProps {
-  shareHash?: string
+interface CasesListProps {
+  casesPromise: Promise<CaseRecord[]>
 }
 
-export function CasesSection({ shareHash }: CasesSectionProps = {}) {
-  const [cases, setCases] = useState<CaseRecord[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+export function CasesList({ casesPromise }: CasesListProps) {
+  // use()フックでPromiseを解決
+  const initialCases = use(casesPromise)
+  
+  const [cases, setCases] = useState<CaseRecord[]>(initialCases)
   const [sharedCase, setSharedCase] = useState<SharedCaseData | null>(null)
   const [shareError, setShareError] = useState<string>("")
   const [isImportingShare, setIsImportingShare] = useState(false)
-  const [sharePreviewBefore, setSharePreviewBefore] = useState<string>("")
-  const [sharePreviewAfter, setSharePreviewAfter] = useState<string>("")
-  const [isLoadingSharePreview, setIsLoadingSharePreview] = useState(false)
-  const sharePreviewBeforeRef = useRef<string>("")
-  const sharePreviewAfterRef = useRef<string>("")
 
-  const getAllCasesWithRetry = async () => {
-    const maxRetries = isWebKitBrowser() ? 3 : 1
-    let lastError: unknown = null
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        return await getAllCases()
-      } catch (e) {
-        lastError = e
-        if (attempt < maxRetries - 1) {
-          await sleep(100 * (attempt + 1))
-        }
-      }
-    }
-    throw lastError
-  }
-
-  const loadCases = async () => {
-    setIsLoading(true)
-    try {
-      // 初回起動時にデフォルトCASEをセットアップ
-      await initializeApp()
-
-      // WebKit環境では、初期化直後のIndexedDB取得が不安定なことがあるため、取得側で最小限リトライする
-      const casesData = await getAllCasesWithRetry()
-      setCases(casesData)
-    } catch (error) {
-      console.error("Failed to load cases:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // キャッシュにデータを保存
   useEffect(() => {
-    loadCases()
-  }, [])
+    dataCache.setCases(cases)
+  }, [cases])
 
   // 共有リンク（#share=...）の読み取り
   useEffect(() => {
     if (typeof window === "undefined") return
-
+    
     const parse = () => {
-      // shareHashプロップが渡されている場合はそれを使用、そうでなければURLハッシュから取得
-      const hash = shareHash || window.location.hash
-      let sharedData: SharedCaseData | null = null
-
-      if (hash && hash.startsWith('#share=')) {
-        const encoded = hash.substring(7) // '#share=' を除去
-        sharedData = decodeSharedCase(encoded)
-      } else {
-        sharedData = getSharedCaseFromUrl()
-      }
-
+      const sharedData = getSharedCaseFromUrl()
       if (!sharedData) {
         setSharedCase(null)
         setShareError("")
         return
       }
-
+      
       try {
         setSharedCase(sharedData)
         setShareError("")
@@ -103,72 +60,11 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
         setShareError("共有リンクの解析に失敗しました。URLが正しいか確認してください。")
       }
     }
-
+    
     parse()
-    if (!shareHash) {
-      window.addEventListener("hashchange", parse)
-      return () => window.removeEventListener("hashchange", parse)
-    }
-  }, [shareHash])
-
-  // 共有プレビュー用に、外部URLをBlob化して表示（DriveのHTML/リダイレクト等で <img> が失敗するケースの回避）
-  useEffect(() => {
-    if (!sharedCase) {
-      if (sharePreviewBeforeRef.current) revokeObjectURL(sharePreviewBeforeRef.current)
-      if (sharePreviewAfterRef.current) revokeObjectURL(sharePreviewAfterRef.current)
-      sharePreviewBeforeRef.current = ""
-      sharePreviewAfterRef.current = ""
-      setSharePreviewBefore("")
-      setSharePreviewAfter("")
-      setIsLoadingSharePreview(false)
-      return
-    }
-
-    let cancelled = false
-    const run = async () => {
-      setIsLoadingSharePreview(true)
-      setSharePreviewBefore("")
-      setSharePreviewAfter("")
-
-      try {
-        const normalizedBefore = convertGoogleDriveUrl(sharedCase.beforeUrl)
-        const normalizedAfter = convertGoogleDriveUrl(sharedCase.afterUrl)
-
-        const [beforeBlob, afterBlob] = await Promise.all([
-          fetchImageFromUrl(normalizedBefore),
-          fetchImageFromUrl(normalizedAfter),
-        ])
-
-        if (cancelled) return
-
-        const beforeObjectUrl = createObjectURL(beforeBlob)
-        const afterObjectUrl = createObjectURL(afterBlob)
-        if (sharePreviewBeforeRef.current) revokeObjectURL(sharePreviewBeforeRef.current)
-        if (sharePreviewAfterRef.current) revokeObjectURL(sharePreviewAfterRef.current)
-        sharePreviewBeforeRef.current = beforeObjectUrl
-        sharePreviewAfterRef.current = afterObjectUrl
-        setSharePreviewBefore(beforeObjectUrl)
-        setSharePreviewAfter(afterObjectUrl)
-      } catch (e: unknown) {
-        if (cancelled) return
-        const msg = e instanceof Error ? e.message : "共有プレビュー画像の取得に失敗しました。"
-        setShareError(msg)
-      } finally {
-        if (!cancelled) setIsLoadingSharePreview(false)
-      }
-    }
-
-    run()
-
-    return () => {
-      cancelled = true
-      if (sharePreviewBeforeRef.current) revokeObjectURL(sharePreviewBeforeRef.current)
-      if (sharePreviewAfterRef.current) revokeObjectURL(sharePreviewAfterRef.current)
-      sharePreviewBeforeRef.current = ""
-      sharePreviewAfterRef.current = ""
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sharedCaseの切り替えに追従（URL文字列が変われば再取得）
-  }, [sharedCase?.beforeUrl, sharedCase?.afterUrl])
+    window.addEventListener("hashchange", parse)
+    return () => window.removeEventListener("hashchange", parse)
+  }, [])
 
   const closeSharePreview = () => {
     if (typeof window === "undefined") return
@@ -218,8 +114,7 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       await addImage(beforeRecord)
       await addImage(afterRecord)
 
-      const casesData = await getAllCases()
-      const order = casesData.length
+      const order = cases.length
 
       const newCase: CaseRecord = {
         id: uuidv4(),
@@ -240,7 +135,12 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
 
       await addCase(newCase)
 
-      await loadCases()
+      // データを再取得
+      const { loadCasesData } = await import("@/lib/data-loader")
+      const updatedCases = await loadCasesData()
+      setCases(updatedCases)
+      dataCache.invalidateCases()
+      
       closeSharePreview()
     } catch (e: unknown) {
       const message =
@@ -269,20 +169,15 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
 
     try {
       await updateCase(updatedCase)
-      await loadCases()
+      
+      // データを再取得
+      const { loadCasesData } = await import("@/lib/data-loader")
+      const updatedCases = await loadCasesData()
+      setCases(updatedCases)
+      dataCache.invalidateCases()
     } catch (error) {
       console.error("Failed to save view settings:", error)
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg font-medium">読み込み中...</div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -323,20 +218,9 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
           {shareError && <p className="mt-3 text-sm text-destructive">{shareError}</p>}
 
           <div className="mt-6">
-            {isLoadingSharePreview && (
-              <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <svg className="h-5 w-5 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-sm font-medium text-muted-foreground">
-                  共有プレビュー画像を読み込み中...
-                </span>
-              </div>
-            )}
             <BeforeAfterSlider
-              beforeImage={sharePreviewBefore || sharedCase.beforeUrl}
-              afterImage={sharePreviewAfter || sharedCase.afterUrl}
+              beforeImage={sharedCase.beforeUrl}
+              afterImage={sharedCase.afterUrl}
               beforeLabel="既存（Before）"
               afterLabel="改修案（After）"
               className="w-full border border-border bg-white shadow-lg"

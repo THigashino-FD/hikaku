@@ -29,9 +29,14 @@ export interface SharedCaseData {
 export function encodeSharedCase(data: SharedCaseData): string {
   try {
     const json = JSON.stringify(data)
-    // Base64エンコード（URL safe）
-    const base64 = btoa(encodeURIComponent(json))
-    return base64
+    // UTF-8バイト列に変換してからBase64エンコード
+    const encoder = new TextEncoder()
+    const uint8Array = encoder.encode(json)
+    // Uint8ArrayをBase64に変換
+    const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('')
+    const base64 = btoa(binaryString)
+    // URL-safe Base64に変換（+ を - に、/ を _ に置き換え、末尾の = を削除）
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
   } catch (error) {
     console.error('Failed to encode shared case:', error)
     throw new Error('共有リンクの生成に失敗しました')
@@ -43,7 +48,25 @@ export function encodeSharedCase(data: SharedCaseData): string {
  */
 export function decodeSharedCase(encoded: string): SharedCaseData | null {
   try {
-    const json = decodeURIComponent(atob(encoded))
+    // Step 1: URL-safe Base64を通常のBase64に変換（- を + に、_ を / に置き換え）
+    // パディング（=）を追加（Base64文字列の長さが4の倍数になるように）
+    let base64 = encoded.replace(/-/g, '+').replace(/_/g, '/')
+    while (base64.length % 4) {
+      base64 += '='
+    }
+    
+    // Step 2: Base64デコード
+    const binaryString = atob(base64)
+    
+    // Step 3: バイナリ文字列をUint8Arrayに変換してUTF-8デコード
+    const uint8Array = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      uint8Array[i] = binaryString.charCodeAt(i)
+    }
+    const decoder = new TextDecoder('utf-8')
+    const json = decoder.decode(uint8Array)
+    
+    // Step 4: JSON parse
     const data = JSON.parse(json) as SharedCaseData
     
     // 必須フィールドの検証
@@ -110,11 +133,21 @@ export function convertGoogleDriveUrl(url: string): string {
 
 /**
  * 共有リンクの完全なURLを生成
+ * @param data 共有データ
+ * @param baseUrl ベースURL（省略時は現在のオリジン）
+ * @param useSharePage 共有専用ページ（/share/[encoded]）を使用するか（デフォルト: true）
  */
-export function generateShareUrl(data: SharedCaseData, baseUrl?: string): string {
-  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '')
+export function generateShareUrl(data: SharedCaseData, baseUrl?: string, useSharePage: boolean = true): string {
+  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')
   const encoded = encodeSharedCase(data)
-  return `${base}#share=${encoded}`
+  
+  if (useSharePage) {
+    // 新しい形式: /share/[encoded]（OG画像対応）
+    return `${base}/share/${encoded}`
+  } else {
+    // 旧形式: #share=[encoded]（後方互換性のため残す）
+    return `${base}#share=${encoded}`
+  }
 }
 
 /**

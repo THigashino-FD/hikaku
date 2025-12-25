@@ -15,6 +15,7 @@ import {
   revokeObjectURL,
   clearAllData,
 } from "@/lib/db"
+import { initializeApp } from "@/lib/init"
 import { resizeImage, formatFileSize, isAllowedImageType, fetchAndResizeImage } from "@/lib/image-utils"
 import { v4 as uuidv4 } from "uuid"
 import { convertGoogleDriveUrl } from "@/lib/share"
@@ -78,6 +79,8 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
 
   const loadData = async () => {
     try {
+      // /manage/images へ直アクセスされた場合でも、デフォルト画像/CASEがセットアップされるようにする
+      await initializeApp()
       const [imagesData, usage] = await Promise.all([
         getAllImages(),
         getImagesUsedByCases(),
@@ -236,14 +239,19 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const totalSize = images.reduce((sum, img) => sum + img.size, 0)
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-6 py-10 md:px-10">
-      {/* Header Section */}
-      <div className="flex items-center justify-between border-b pb-4">
-        <h1 className="text-xl font-bold">画像ライブラリ</h1>
-        <Button variant="outline" onClick={onClose}>
-          閉じる
-        </Button>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <main className="relative flex h-full max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-background shadow-xl">
+        <header className="sticky top-0 z-40 border-b bg-card py-4 shadow-sm">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
+            <h1 className="text-xl font-bold">画像ライブラリ</h1>
+            <Button variant="outline" onClick={onClose}>
+              閉じる
+            </Button>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl space-y-6 px-6 py-10 md:px-10">
         {/* Stats & Actions */}
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
           <div className="flex gap-6 text-sm">
@@ -442,6 +450,9 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
             </div>
           )}
         </section>
+          </div>
+        </div>
+      </main>
     </div>
   )
 }
