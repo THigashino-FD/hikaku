@@ -139,7 +139,7 @@ test.describe('CASE管理', () => {
     
     // 削除前のCASE数を確認
     const initialCount = await allCards.count();
-    expect(initialCount).toBeGreaterThan(0); // 少なくとも1つはCASEがあることを確認
+    expect(initialCount, `CASEが読み込まれていません。現在のCASE数: ${initialCount}`).toBeGreaterThan(0);
     
     // 最初のCASEの削除ボタンをクリック
     page.once('dialog', dialog => {
@@ -152,7 +152,7 @@ test.describe('CASE管理', () => {
     // CASEが1つ減っている（WebKitでは削除処理に時間がかかる場合がある）
     await page.waitForTimeout(2000);
     const newCount = await allCards.count();
-    expect(newCount).toBe(initialCount - 1);
+    expect(newCount, `削除後のCASE数が期待値と異なります。削除前: ${initialCount}, 削除後: ${newCount}`).toBe(initialCount - 1);
   });
 
   test('CASEを複製できる', async ({ page }) => {
@@ -172,7 +172,7 @@ test.describe('CASE管理', () => {
     
     // CASE数が1つ増えている
     const newCount = await allCards.count();
-    expect(newCount).toBe(initialCount + 1);
+    expect(newCount, `複製後のCASE数が期待値と異なります。複製前: ${initialCount}, 複製後: ${newCount}`).toBe(initialCount + 1);
     
     // 複製されたCASEに「(コピー)」が含まれている
     await expect(page.getByText(/CASE.*\(コピー\)/)).toBeVisible();
@@ -199,12 +199,12 @@ test.describe('CASE管理', () => {
     // CASE 02が1番目に移動している
     const newFirstCard = allCards.first();
     const newSecondCard = allCards.nth(1);
-    await expect(newFirstCard).toBeVisible();
-    await expect(newSecondCard).toBeVisible();
+    await expect(newFirstCard, '移動後の1番目のCASEカードが表示されていません').toBeVisible();
+    await expect(newSecondCard, '移動後の2番目のCASEカードが表示されていません').toBeVisible();
     const newFirstTitle = await newFirstCard.getAttribute('data-case-title');
     const newSecondTitle = await newSecondCard.getAttribute('data-case-title');
-    expect(newFirstTitle).toContain('CASE 02');
-    expect(newSecondTitle).toContain('CASE 01');
+    expect(newFirstTitle, `1番目のCASEが期待値と異なります。実際: ${newFirstTitle}`).toContain('CASE 02');
+    expect(newSecondTitle, `2番目のCASEが期待値と異なります。実際: ${newSecondTitle}`).toContain('CASE 01');
   });
 
   test('CASEの並び順を変更できる（下へ移動）', async ({ page }) => {
@@ -227,12 +227,12 @@ test.describe('CASE管理', () => {
     // CASE 01が2番目に移動している
     const newFirstCard = allCards.first();
     const newSecondCard = allCards.nth(1);
-    await expect(newFirstCard).toBeVisible();
-    await expect(newSecondCard).toBeVisible();
+    await expect(newFirstCard, '移動後の1番目のCASEカードが表示されていません').toBeVisible();
+    await expect(newSecondCard, '移動後の2番目のCASEカードが表示されていません').toBeVisible();
     const newFirstTitle = await newFirstCard.getAttribute('data-case-title');
     const newSecondTitle = await newSecondCard.getAttribute('data-case-title');
-    expect(newFirstTitle).toContain('CASE 02');
-    expect(newSecondTitle).toContain('CASE 01');
+    expect(newFirstTitle, `1番目のCASEが期待値と異なります。実際: ${newFirstTitle}`).toContain('CASE 02');
+    expect(newSecondTitle, `2番目のCASEが期待値と異なります。実際: ${newSecondTitle}`).toContain('CASE 01');
   });
 
   test('並び順変更後、閲覧ページに反映される', async ({ page }) => {
