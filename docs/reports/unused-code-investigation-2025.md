@@ -44,7 +44,7 @@
 - `lib/data-loader.ts:82-88` - `createManageDataPromise`の定義
 
 **使用状況:**
-- `loadCasesData` - `components/cases-list.tsx`で使用 ✅
+- `loadCasesData` - 現在は未使用（過去に `components/cases-list.tsx` で使用されていたが削除済み）
 - `loadManageData` - `components/manage-case-list.tsx`で使用 ✅
 - `createCasesDataPromise` - 使用されていない ❌
 - `createManageDataPromise` - 使用されていない ❌
@@ -59,9 +59,8 @@
 
 以下の関数は実際に使用されているため、問題ありません：
 
-- ✅ `loadCasesData` - `components/cases-list.tsx`で使用
 - ✅ `loadManageData` - `components/manage-case-list.tsx`で使用
-- ✅ `dataCache` - `components/cases-list.tsx`、`components/manage-case-list.tsx`で使用
+- ✅ `dataCache` - `components/manage-case-list.tsx`で使用
 - ✅ `withRetry` - `lib/data-loader.ts`、`components/cases-section.tsx`で使用
 - ✅ `isWebKitBrowser` - `lib/browser.ts`内で`withRetry`から使用
 - ✅ `sleep` - `lib/browser.ts`内で`withRetry`から使用、`lib/init.ts`でも使用
