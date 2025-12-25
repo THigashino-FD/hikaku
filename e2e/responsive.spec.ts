@@ -79,7 +79,6 @@ test.describe('レスポンシブ（基本崩れチェック）', () => {
     await page.waitForTimeout(3000);
 
     // CASE編集へ
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
     const allCards = await waitForCaseCards(page);
     const firstCard = allCards.first();
     await firstCard.getByTestId('manage-case-edit').click();
