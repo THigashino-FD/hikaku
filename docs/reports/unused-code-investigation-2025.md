@@ -72,15 +72,38 @@
 
 ---
 
-## 4. 既に削除済みの項目（参考）
+## 4. 過去に削除済みの項目（参考）
 
-過去の調査レポート（`docs/reports/unused-code-report.md`）によると、以下の項目は既に削除されています：
+以下の項目は過去の調査（2025-12-22）で削除されています：
 
-1. ✅ 未使用のプロップ `shareTitle` と `shareDescription`
-2. ✅ 未使用の関数 `getImageDimensions` と `isImageFile`
-3. ✅ 未使用の戻り値 `originalWidth` と `originalHeight`
-4. ✅ 誤解を招くコメント
-5. ✅ 未使用の型定義フィールド `comparisonMode`
+### 4.1 未使用のプロップ
+
+**`shareTitle` と `shareDescription` (components/before-after-slider.tsx)** ✅削除済み
+- `BeforeAfterSlider`コンポーネントのプロップとして定義されていたが使用されていなかった
+- `case-viewer.tsx`と`app/page.tsx`から受け渡しも削除
+
+### 4.2 未使用の関数
+
+**`getImageDimensions` (lib/image-utils.ts)** ✅削除済み
+- プロジェクト内のどこからも呼び出されていなかった
+
+**`isImageFile` (lib/image-utils.ts)** ✅削除済み
+- 類似の`isAllowedImageType`が実際に使用されていたため削除
+
+### 4.3 未使用の戻り値
+
+**`originalWidth` と `originalHeight` (lib/image-utils.ts)** ✅削除済み
+- `resizeImage`関数と`fetchAndResizeImage`関数の戻り値として定義されていたが、呼び出し側で使用されていなかった
+
+### 4.4 誤解を招くコメント
+
+**`before-after-slider.tsx` 内のコメント** ✅削除済み
+- 存在しない関数を参照していたコメントを削除
+
+### 4.5 未使用の型定義フィールド
+
+**`comparisonMode` (lib/share.ts)** ✅削除済み
+- `SharedCaseData`インターフェースに定義されていたが、実際の共有データでは使用されていなかった
 
 ---
 
