@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Code Quality
+- Lintチェック修正
+  - 未使用変数 `isAnimating` を削除
+  - `useEffect`の依存配列を修正（`loadCases`を`useCallback`でメモ化）
+  - 外部URL用の`<img>`タグ警告に対応（ESLint設定で許可）
+- 不要な依存関係パッケージを削除（46パッケージ）
+  - `jspdf`, `konva`, `react-konva`, `vaul`, `zod`
+- 未使用の関数を削除（2関数）
+  - `createCasesDataPromise`, `createManageDataPromise`
+
+### Documentation
+- docsディレクトリの整理
+  - 完了済み作業レポートを削除（23ファイル）
+  - 重複レポートを統合
+  - 参考資料として有用なレポートのみ残す（4ファイル）
+
 ## [0.1.1] - 2024-12-22
 
 ### Upgraded

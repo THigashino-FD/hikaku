@@ -105,7 +105,7 @@ PlaywrightによるE2Eテストを実装しています。
 npm test
 ```
 
-詳細は [E2Eテストレポート](./docs/reports/e2e-test-report.md) を参照してください。
+詳細は [テスト不足レポート](./docs/reports/missing-tests-report.md) および [レスポンシブテスト結果](./docs/reports/e2e-responsive-test-results.md) を参照してください。
 
 ## プロジェクト構成
 
@@ -224,7 +224,8 @@ This project is private and proprietary to FREEDOM ARCHITECTS.
 - [初期スライダー位置機能](./docs/features/initial-slider-position.md)
 - [新機能一覧](./docs/features/new-features.md)
 
-### レポート・履歴
-- [E2Eテストレポート](./docs/reports/e2e-test-report.md)
-- [アニメーション最適化](./docs/reports/animation-optimization.md)
-- [エラー修正履歴](./docs/reports/error-fixed-final.md)
+### レポート
+- [コードベース全体調査レポート](./docs/reports/code-audit-report.md)
+- [テスト不足レポート](./docs/reports/missing-tests-report.md)
+- [不要なコード調査レポート](./docs/reports/unused-code-investigation-2025.md)
+- [レスポンシブテスト結果](./docs/reports/e2e-responsive-test-results.md)
