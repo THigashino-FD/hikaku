@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
@@ -17,23 +17,22 @@ interface ImagePickerProps {
 export function ImagePicker({ images, selectedImageId, onSelect, label }: ImagePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map())
 
-  // 画像URLを生成
-  useEffect(() => {
+  // 画像URLを生成（setState-in-effect を避ける）
+  const imageUrls = useMemo(() => {
     const urls = new Map<string, string>()
-    
-    images.forEach((img) => {
-      const url = createObjectURL(img.blob)
-      urls.set(img.id, url)
-    })
-    
-    setImageUrls(urls)
-
-    return () => {
-      urls.forEach((url) => revokeObjectURL(url))
+    for (const img of images) {
+      urls.set(img.id, createObjectURL(img.blob))
     }
+    return urls
   }, [images])
+
+  // 生成したObjectURLをクリーンアップ
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach((url) => revokeObjectURL(url))
+    }
+  }, [imageUrls])
 
   const filteredImages = images.filter((img) =>
     img.name.toLowerCase().includes(searchQuery.toLowerCase())

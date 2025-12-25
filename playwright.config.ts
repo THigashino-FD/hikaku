@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const isFullE2E = !!process.env.FULL_E2E || !!process.env.CI;
+const useWebServer = !!process.env.PLAYWRIGHT_WEB_SERVER;
+const baseURL = useWebServer ? 'http://localhost:3100' : 'http://localhost:3000';
 
 export default defineConfig({
   testDir: './e2e',
@@ -10,7 +12,7 @@ export default defineConfig({
   workers: isFullE2E ? (process.env.CI ? 2 : 4) : 2, // デフォルトは短時間のSMOKE
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -26,11 +28,19 @@ export default defineConfig({
       ]
     : [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 
-  // webServerを無効化して既存サーバーを使用
-  // webServer: {
-  //   command: 'npm run dev',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: true,
-  //   timeout: 120 * 1000,
-  // },
+  // 既定では既存サーバーを使用（ユーザーの指示がない限り、自動起動はしない）
+  // E2E専用ルートなど「サーバ再起動が必要」な検証を安定させたい場合だけ有効化:
+  //   PLAYWRIGHT_WEB_SERVER=1 npm test
+  webServer: useWebServer
+    ? {
+        // Error Boundary 等の挙動を安定させるため、本番サーバで実行する
+        // （dev の Redbox/overlay が E2E を不安定にするため）
+        // 既存の開発サーバ（3000）と衝突しないように 3100 を使用する
+        command: 'E2E_ROUTES=1 npm run build && E2E_ROUTES=1 npm run start -- -p 3100',
+        url: 'http://localhost:3100',
+        // 既存サーバ（dev等）を再利用すると挙動が変わるため、常に新規起動する
+        reuseExistingServer: false,
+        timeout: 180 * 1000,
+      }
+    : undefined,
 });
