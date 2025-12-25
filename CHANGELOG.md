@@ -9,8 +9,9 @@ All notable changes to this project will be documented in this file.
   - 未使用変数 `isAnimating` を削除
   - `useEffect`の依存配列を修正（`loadCases`を`useCallback`でメモ化）
   - 外部URL用の`<img>`タグ警告に対応（ESLint設定で許可）
-- 不要な依存関係パッケージを削除（46パッケージ）
+- 不要な依存関係パッケージを削除（47パッケージ）
   - `jspdf`, `konva`, `react-konva`, `vaul`, `zod`
+  - `autoprefixer`（Tailwind CSS 4で不要）
 - 未使用の関数を削除（2関数）
   - `createCasesDataPromise`, `createManageDataPromise`
 
