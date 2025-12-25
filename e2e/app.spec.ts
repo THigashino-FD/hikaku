@@ -1,6 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, Locator } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+/**
+ * CASEカードが読み込まれるまで待機し、カードのLocatorを返すヘルパー関数
+ */
+async function waitForCaseCards(page: Page): Promise<Locator> {
+  // デフォルトCASEが表示されるまで待つ
+  await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 10000 });
+  
+  // CASEカードが表示されるまで待つ
+  const allCards = page.getByTestId('manage-case-card');
+  await expect(allCards.first()).toBeVisible({ timeout: 10000 });
+  
+  return allCards;
+}
 
 test.describe('初期表示とデフォルトCASE', () => {
   test.beforeEach(async ({ context }) => {
@@ -69,13 +83,15 @@ test.describe('CASE管理', () => {
     await expect(page.getByText('CASE 02')).toBeVisible();
     await expect(page.getByText('CASE 03')).toBeVisible();
     
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
+    
     // 各CASEに共有ボタンがある（3件）
-    const shareButtons = await page.getByRole('button', { name: '共有' }).count();
+    const shareButtons = await allCards.getByTestId('manage-case-share').count();
     expect(shareButtons).toBe(3);
     
-    // 「CASE一覧」セクション内の編集ボタンが3つある
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
-    const editButtons = await caseSection.getByRole('button', { name: '編集' }).count();
+    // 各CASEに編集ボタンがある（3件）
+    const editButtons = await allCards.getByTestId('manage-case-edit').count();
     expect(editButtons).toBe(3);
   });
 
@@ -89,9 +105,12 @@ test.describe('CASE管理', () => {
   });
 
   test('CASEを編集できる', async ({ page }) => {
-    // 「CASE一覧」セクション内の最初のCASEの編集ボタンをクリック
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
-    await caseSection.getByRole('button', { name: '編集' }).first().click();
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
+    
+    // 最初のCASEの編集ボタンをクリック
+    const firstCard = allCards.first();
+    await firstCard.getByTestId('manage-case-edit').click();
     
     // CASE編集ページの読み込みを待つ
     await page.waitForTimeout(1000);
@@ -115,15 +134,11 @@ test.describe('CASE管理', () => {
   });
 
   test('CASEを削除できる', async ({ page }) => {
-    // デフォルトCASEが表示されるまで待つ
-    await expect(page.getByText('CASE 01')).toBeVisible();
-    
-    // CASEカードが表示されるまで待つ
-    const firstCard = page.getByTestId('manage-case-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 10000 });
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
     
     // 削除前のCASE数を確認
-    const initialCount = await page.getByTestId('manage-case-card').count();
+    const initialCount = await allCards.count();
     expect(initialCount).toBeGreaterThan(0); // 少なくとも1つはCASEがあることを確認
     
     // 最初のCASEの削除ボタンをクリック
@@ -131,36 +146,32 @@ test.describe('CASE管理', () => {
       expect(dialog.message()).toContain('削除');
       dialog.accept();
     });
-    const deleteTargetCard = page.getByTestId('manage-case-card').first();
+    const deleteTargetCard = allCards.first();
     await deleteTargetCard.getByTestId('manage-case-delete').click();
     
     // CASEが1つ減っている（WebKitでは削除処理に時間がかかる場合がある）
     await page.waitForTimeout(2000);
-    const newCount = await page.getByTestId('manage-case-card').count();
+    const newCount = await allCards.count();
     expect(newCount).toBe(initialCount - 1);
   });
 
   test('CASEを複製できる', async ({ page }) => {
-    // デフォルトCASEが表示されるまで待つ
-    await expect(page.getByText('CASE 01')).toBeVisible();
-    
-    // CASEカードが表示されるまで待つ
-    const firstCard = page.getByTestId('manage-case-card').first();
-    await expect(firstCard).toBeVisible({ timeout: 10000 });
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
     
     // 複製前のCASE数を確認
-    const initialCount = await page.getByTestId('manage-case-card').count();
+    const initialCount = await allCards.count();
     expect(initialCount).toBeGreaterThan(0);
     
     // 最初のCASEの複製ボタンをクリック
-    const duplicateTargetCard = page.getByTestId('manage-case-card').first();
+    const duplicateTargetCard = allCards.first();
     await duplicateTargetCard.getByTestId('manage-case-duplicate').click();
     
     // 複製されたCASEが追加されるのを待つ
     await page.waitForTimeout(2000);
     
     // CASE数が1つ増えている
-    const newCount = await page.getByTestId('manage-case-card').count();
+    const newCount = await allCards.count();
     expect(newCount).toBe(initialCount + 1);
     
     // 複製されたCASEに「(コピー)」が含まれている
@@ -168,13 +179,8 @@ test.describe('CASE管理', () => {
   });
 
   test('CASEの並び順を変更できる（上へ移動）', async ({ page }) => {
-    // デフォルトCASEが表示されるまで待つ
-    await expect(page.getByText('CASE 01')).toBeVisible();
-    await expect(page.getByText('CASE 02')).toBeVisible();
-    
-    // CASEカードが表示されるまで待つ
-    const allCards = page.getByTestId('manage-case-card');
-    await expect(allCards.first()).toBeVisible({ timeout: 10000 });
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
     await expect(allCards.nth(1)).toBeVisible({ timeout: 10000 });
     
     // CASE 02の位置を確認（2番目）
@@ -202,13 +208,8 @@ test.describe('CASE管理', () => {
   });
 
   test('CASEの並び順を変更できる（下へ移動）', async ({ page }) => {
-    // デフォルトCASEが表示されるまで待つ
-    await expect(page.getByText('CASE 01')).toBeVisible();
-    await expect(page.getByText('CASE 02')).toBeVisible();
-    
-    // CASEカードが表示されるまで待つ
-    const allCards = page.getByTestId('manage-case-card');
-    await expect(allCards.first()).toBeVisible({ timeout: 10000 });
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
     
     // CASE 01の位置を確認（1番目）
     const case01CardAtFirst = allCards.first();
@@ -235,12 +236,8 @@ test.describe('CASE管理', () => {
   });
 
   test('並び順変更後、閲覧ページに反映される', async ({ page }) => {
-    // デフォルトCASEが表示されるまで待つ
-    await expect(page.getByText('CASE 01')).toBeVisible();
-    
-    // CASEカードが表示されるまで待つ
-    const allCards = page.getByTestId('manage-case-card');
-    await expect(allCards.first()).toBeVisible({ timeout: 10000 });
+    // CASEカードが読み込まれるまで待つ
+    const allCards = await waitForCaseCards(page);
     
     // CASE 01を下へ移動
     const case01Card = allCards.filter({ hasText: 'CASE 01' }).first();
@@ -654,8 +651,9 @@ test.describe('データ永続性', () => {
     await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 15000 });
     
     // CASE 01の編集ボタンをクリック
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
-    await caseSection.getByRole('button', { name: '編集' }).first().click();
+    const allCards = await waitForCaseCards(page);
+    const firstCard = allCards.first();
+    await firstCard.getByTestId('manage-case-edit').click();
     await page.waitForTimeout(1500);
     
     // CASE編集ページが表示されることを確認

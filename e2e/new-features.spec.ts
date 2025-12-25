@@ -1,4 +1,18 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, Locator } from '@playwright/test';
+
+/**
+ * CASEカードが読み込まれるまで待機し、カードのLocatorを返すヘルパー関数
+ */
+async function waitForCaseCards(page: Page): Promise<Locator> {
+  // デフォルトCASEが表示されるまで待つ
+  await expect(page.getByText('CASE 01')).toBeVisible({ timeout: 10000 });
+  
+  // CASEカードが表示されるまで待つ
+  const allCards = page.getByTestId('manage-case-card');
+  await expect(allCards.first()).toBeVisible({ timeout: 10000 });
+  
+  return allCards;
+}
 
 test.describe('新機能テスト', () => {
   test.beforeEach(async ({ context }) => {
@@ -197,9 +211,10 @@ test.describe('新機能テスト', () => {
     // デフォルトCASEのセットアップを待つ
     await page.waitForTimeout(3000);
     
-    // CASE 01の編集ボタンをクリック（CASE一覧セクション内）
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
-    await caseSection.getByRole('button', { name: /編集/ }).first().click();
+    // CASE 01の編集ボタンをクリック
+    const allCards = await waitForCaseCards(page);
+    const firstCard = allCards.first();
+    await firstCard.getByTestId('manage-case-edit').click();
     await page.waitForTimeout(1500);
     
     // 初期スライダー位置の項目が表示されることを確認
@@ -222,9 +237,10 @@ test.describe('新機能テスト', () => {
     // デフォルトCASEのセットアップを待つ
     await page.waitForTimeout(3000);
     
-    // CASE 01の編集ボタンをクリック（CASE一覧セクション内）
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
-    await caseSection.getByRole('button', { name: /編集/ }).first().click();
+    // CASE 01の編集ボタンをクリック
+    const allCards = await waitForCaseCards(page);
+    const firstCard = allCards.first();
+    await firstCard.getByTestId('manage-case-edit').click();
     await page.waitForTimeout(1500);
     
     // アニメーションを「なし」に変更
@@ -327,8 +343,9 @@ test.describe('共有機能', () => {
     await page.waitForTimeout(3000);
     
     // CASE 01の共有ボタンをクリック
-    const caseSection = page.locator('section').filter({ hasText: 'CASE一覧' });
-    const shareButton = caseSection.getByRole('button', { name: '共有' }).first();
+    const allCards = await waitForCaseCards(page);
+    const firstCard = allCards.first();
+    const shareButton = firstCard.getByTestId('manage-case-share');
     await expect(shareButton).toBeVisible();
     await shareButton.click();
     
