@@ -1,8 +1,9 @@
+import { memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export function Header() {
+export const Header = memo(function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-primary py-4 shadow-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
@@ -38,5 +39,5 @@ export function Header() {
       </div>
     </header>
   )
-}
+})
 

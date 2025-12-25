@@ -6,6 +6,7 @@
  */
 
 import { use, useState, useOptimistic, useCallback } from "react"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { 
   addCase, 
@@ -16,14 +17,20 @@ import {
   ImageRecordWithBlob,
   getImageById,
 } from "@/lib/db"
-import { ImageLibrary } from "@/components/image-library"
-import { CaseEditor } from "@/components/case-editor"
 import { CaseListItem } from "@/components/case-list-item"
 import { Input } from "@/components/ui/input"
 import { v4 as uuidv4 } from "uuid"
 import { generateShareUrl, type SharedCaseData } from "@/lib/share"
 import { useToast } from "@/components/ui/toast"
 import { dataCache } from "@/lib/data-cache"
+
+// モーダルコンポーネントを動的インポート（初期バンドルサイズ削減）
+const ImageLibrary = dynamic(() => import("@/components/image-library").then(mod => ({ default: mod.ImageLibrary })), {
+  loading: () => <div className="flex items-center justify-center p-8">読み込み中...</div>,
+})
+const CaseEditor = dynamic(() => import("@/components/case-editor").then(mod => ({ default: mod.CaseEditor })), {
+  loading: () => <div className="flex items-center justify-center p-8">読み込み中...</div>,
+})
 
 interface ManageCaseListProps {
   dataPromise: Promise<{

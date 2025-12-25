@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, memo } from "react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import {
@@ -23,7 +23,7 @@ interface CaseListItemProps {
   isShareable?: boolean // 共有可能かどうか
 }
 
-export function CaseListItem({
+export const CaseListItem = memo(function CaseListItem({
   caseRecord,
   index,
   totalCount,
@@ -259,5 +259,5 @@ export function CaseListItem({
       </div>
     </div>
   )
-}
+})
 

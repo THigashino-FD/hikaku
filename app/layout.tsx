@@ -4,8 +4,17 @@ import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ToastProvider } from "@/components/ui/toast"
 
-const geist = Geist({ subsets: ["latin"] })
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
+const geist = Geist({ 
+  subsets: ["latin"],
+  display: 'swap',
+  preload: true,
+})
+const geistMono = Geist_Mono({ 
+  subsets: ["latin"], 
+  variable: "--font-mono",
+  display: 'swap',
+  preload: true,
+})
 
 export const metadata: Metadata = {
   title: "NEUTRAL COMPARE - FREEDOM ARCHITECTS",

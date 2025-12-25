@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { 
   getAllCases, 
@@ -14,13 +15,19 @@ import {
   getImageById,
 } from "@/lib/db"
 import { initializeApp } from "@/lib/init"
-import { ImageLibrary } from "@/components/image-library"
-import { CaseEditor } from "@/components/case-editor"
 import { CaseListItem } from "@/components/case-list-item"
 import { Input } from "@/components/ui/input"
 import { v4 as uuidv4 } from "uuid"
 import { generateShareUrl, type SharedCaseData } from "@/lib/share"
 import { useToast } from "@/components/ui/toast"
+
+// モーダルコンポーネントを動的インポート（初期バンドルサイズ削減）
+const ImageLibrary = dynamic(() => import("@/components/image-library").then(mod => ({ default: mod.ImageLibrary })), {
+  loading: () => <div className="flex items-center justify-center p-8">読み込み中...</div>,
+})
+const CaseEditor = dynamic(() => import("@/components/case-editor").then(mod => ({ default: mod.CaseEditor })), {
+  loading: () => <div className="flex items-center justify-center p-8">読み込み中...</div>,
+})
 
 export function ManageContent() {
   const [cases, setCases] = useState<CaseRecord[]>([])
@@ -70,7 +77,7 @@ export function ManageContent() {
     loadData()
   }, [])
 
-  const handleAddCase = async () => {
+  const handleAddCase = useCallback(async () => {
     const newCase: CaseRecord = {
       id: uuidv4(),
       title: `CASE ${cases.length + 1}`,
@@ -93,13 +100,13 @@ export function ManageContent() {
       console.error("Failed to add case:", error)
       showToast("CASEの追加に失敗しました", "error")
     }
-  }
+  }, [cases.length, showToast])
 
-  const handleEditCase = (caseRecord: CaseRecord) => {
+  const handleEditCase = useCallback((caseRecord: CaseRecord) => {
     setEditingCase(caseRecord)
-  }
+  }, [])
 
-  const handleSaveCase = async (caseRecord: CaseRecord) => {
+  const handleSaveCase = useCallback(async (caseRecord: CaseRecord) => {
     try {
       await updateCase(caseRecord)
       await loadData()
@@ -108,9 +115,9 @@ export function ManageContent() {
       console.error("Failed to update case:", error)
       showToast("CASEの更新に失敗しました", "error")
     }
-  }
+  }, [showToast])
 
-  const handleDeleteCase = async (id: string) => {
+  const handleDeleteCase = useCallback(async (id: string) => {
     if (!confirm("このCASEを削除してもよろしいですか？")) {
       return
     }
@@ -122,9 +129,9 @@ export function ManageContent() {
       console.error("Failed to delete case:", error)
       showToast("CASEの削除に失敗しました", "error")
     }
-  }
+  }, [showToast])
 
-  const handleDuplicateCase = async (caseRecord: CaseRecord) => {
+  const handleDuplicateCase = useCallback(async (caseRecord: CaseRecord) => {
     const duplicated: CaseRecord = {
       ...caseRecord,
       id: uuidv4(),
@@ -141,9 +148,9 @@ export function ManageContent() {
       console.error("Failed to duplicate case:", error)
       showToast("CASEの複製に失敗しました", "error")
     }
-  }
+  }, [cases.length, showToast])
 
-  const handleMoveUp = async (index: number) => {
+  const handleMoveUp = useCallback(async (index: number) => {
     if (index === 0) return
     
     const newCases = [...cases]
@@ -158,9 +165,9 @@ export function ManageContent() {
       console.error("Failed to reorder cases:", error)
       showToast("並び替えに失敗しました", "error")
     }
-  }
+  }, [cases, showToast])
 
-  const handleMoveDown = async (index: number) => {
+  const handleMoveDown = useCallback(async (index: number) => {
     if (index === cases.length - 1) return
 
     const newCases = [...cases]
@@ -175,9 +182,9 @@ export function ManageContent() {
       console.error("Failed to reorder cases:", error)
       showToast("並び替えに失敗しました", "error")
     }
-  }
+  }, [cases, showToast])
 
-  const handleShare = async (caseRecord: CaseRecord) => {
+  const handleShare = useCallback(async (caseRecord: CaseRecord) => {
     setShareError("")
     setShareLink("")
     
@@ -218,9 +225,9 @@ export function ManageContent() {
       setShareError("共有リンクの生成に失敗しました")
       setSharingCase(caseRecord)
     }
-  }
+  }, [])
 
-  const copyShareLink = async () => {
+  const copyShareLink = useCallback(async () => {
     if (!shareLink) return
     try {
       await navigator.clipboard.writeText(shareLink)
@@ -228,7 +235,7 @@ export function ManageContent() {
     } catch {
       showToast("コピーに失敗しました", "error")
     }
-  }
+  }, [shareLink, showToast])
 
   if (isLoading) {
     return (

@@ -1,6 +1,7 @@
+import { memo } from "react"
 import Image from "next/image"
 
-export function Footer() {
+export const Footer = memo(function Footer() {
   return (
     <footer className="mt-20 bg-[#0b5560] py-14 text-white">
       <div className="mx-auto max-w-7xl px-6 md:px-10">
@@ -23,5 +24,5 @@ export function Footer() {
       </div>
     </footer>
   )
-}
+})
 

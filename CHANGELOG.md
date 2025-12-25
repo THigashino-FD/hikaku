@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Performance
+- モーダルコンポーネントの動的インポート化
+  - `ImageLibrary` と `CaseEditor` を遅延読み込みに変更
+  - 初期バンドルサイズの削減
+- フォント読み込みの最適化
+  - `display: 'swap'` を設定してFOIT (Flash of Invisible Text) を削減
+  - LCP (Largest Contentful Paint) の改善
+- コンポーネントのメモ化
+  - `CaseListItem`, `Header`, `Footer` を `React.memo` でラップ
+  - 不要な再レンダリングを削減
+- コールバック関数のメモ化
+  - 管理ページの各ハンドラ関数を `useCallback` でメモ化
+  - 子コンポーネントへの不要なprops変更を防止
+
 ### Code Quality
 - Lintチェック修正
   - 未使用変数 `isAnimating` を削除
