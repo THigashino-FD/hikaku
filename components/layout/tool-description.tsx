@@ -1,6 +1,6 @@
 export function ToolDescription() {
   return (
-    <section className="border-l-4 border-primary pl-6">
+    <section className="mx-auto max-w-7xl px-6 pt-10 md:px-10">
       <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
         劇的ビフォー/アフターツール
       </h1>

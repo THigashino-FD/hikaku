@@ -264,21 +264,18 @@ export function ManageContent() {
 
   if (sharingCase) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-40 border-b bg-card py-4 shadow-sm">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
-            <h1 className="text-xl font-bold">共有リンク生成</h1>
-            <Button variant="outline" onClick={() => {
-              setSharingCase(null)
-              setShareLink("")
-              setShareError("")
-            }}>
-              閉じる
-            </Button>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-3xl space-y-6 px-6 py-10 md:px-10">
+      <div className="mx-auto max-w-3xl space-y-6 px-6 py-10 md:px-10">
+        {/* Header Section */}
+        <div className="flex items-center justify-between border-b pb-4">
+          <h1 className="text-xl font-bold">共有リンク生成</h1>
+          <Button variant="outline" onClick={() => {
+            setSharingCase(null)
+            setShareLink("")
+            setShareError("")
+          }}>
+            閉じる
+          </Button>
+        </div>
           <div className="rounded-lg border bg-card p-6">
             <h2 className="mb-2 text-lg font-semibold">{sharingCase.title}</h2>
             {sharingCase.description && (
@@ -385,7 +382,6 @@ export function ManageContent() {
               </div>
             )}
           </div>
-        </div>
       </div>
     )
   }

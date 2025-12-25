@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 bg-primary py-4 shadow-md">
+    <header className="sticky top-0 z-40 border-b bg-primary py-4 shadow-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10">

@@ -236,17 +236,14 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const totalSize = images.reduce((sum, img) => sum + img.size, 0)
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card py-4 shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
-          <h1 className="text-xl font-bold">画像ライブラリ</h1>
-          <Button variant="outline" onClick={onClose}>
-            閉じる
-          </Button>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl space-y-6 px-6 py-10 md:px-10">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-10 md:px-10">
+      {/* Header Section */}
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-xl font-bold">画像ライブラリ</h1>
+        <Button variant="outline" onClick={onClose}>
+          閉じる
+        </Button>
+      </div>
         {/* Stats & Actions */}
         <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
           <div className="flex gap-6 text-sm">
@@ -445,8 +442,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
             </div>
           )}
         </section>
-      </div>
-    </main>
+    </div>
   )
 }
 

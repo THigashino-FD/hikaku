@@ -92,20 +92,17 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card py-4 shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
-          <h1 className="text-xl font-bold">CASE編集</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              キャンセル
-            </Button>
-            <Button onClick={handleSave}>保存</Button>
-          </div>
+    <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
+      {/* Header Section */}
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-xl font-bold">CASE編集</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            キャンセル
+          </Button>
+          <Button onClick={handleSave}>保存</Button>
         </div>
-      </header>
-
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
+      </div>
         {/* Basic Info */}
         <section className="space-y-4 rounded-lg border bg-card p-6">
           <h2 className="text-lg font-semibold">基本情報</h2>
@@ -379,8 +376,7 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
             />
           </section>
         )}
-      </div>
-    </main>
+    </div>
   )
 }
 
