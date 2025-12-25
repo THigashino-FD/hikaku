@@ -16,7 +16,7 @@ import {
   revokeObjectURL,
 } from "@/lib/db"
 import { initializeApp } from "@/lib/init"
-import { isWebKitBrowser, sleep } from "@/lib/browser"
+import { withRetry } from "@/lib/browser"
 import { getSharedCaseFromUrl, decodeSharedCase, convertGoogleDriveUrl, type SharedCaseData } from "@/lib/share"
 import { fetchAndResizeImage, fetchImageFromUrl } from "@/lib/image-utils"
 import { v4 as uuidv4 } from "uuid"
@@ -38,19 +38,7 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
   const sharePreviewAfterRef = useRef<string>("")
 
   const getAllCasesWithRetry = async () => {
-    const maxRetries = isWebKitBrowser() ? 3 : 1
-    let lastError: unknown = null
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        return await getAllCases()
-      } catch (e) {
-        lastError = e
-        if (attempt < maxRetries - 1) {
-          await sleep(100 * (attempt + 1))
-        }
-      }
-    }
-    throw lastError
+    return withRetry(() => getAllCases())
   }
 
   const loadCases = async () => {

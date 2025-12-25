@@ -11,25 +11,13 @@ import {
   type ImageRecordWithBlob,
 } from "@/lib/db"
 import { initializeApp } from "@/lib/init"
-import { isWebKitBrowser, sleep } from "@/lib/browser"
+import { withRetry } from "@/lib/browser"
 
 /**
  * CASEデータを取得（リトライ対応）
  */
 async function getAllCasesWithRetry(): Promise<CaseRecord[]> {
-  const maxRetries = isWebKitBrowser() ? 3 : 1
-  let lastError: unknown = null
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await getAllCases()
-    } catch (e) {
-      lastError = e
-      if (attempt < maxRetries - 1) {
-        await sleep(100 * (attempt + 1))
-      }
-    }
-  }
-  throw lastError
+  return withRetry(() => getAllCases())
 }
 
 /**
