@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { ToolDescription } from "@/components/layout/tool-description"
 import { CasesSection } from "@/components/cases-section"
+import { Loading } from "@/components/ui/loading"
 
 export const metadata: Metadata = {
   title: "劇的ビフォー/アフターツール - NEUTRAL COMPARE",
@@ -20,14 +21,7 @@ export default function Home() {
       <Header />
       <ToolDescription />
       {/* 動的コンテンツをSuspenseでラップしてストリーミング */}
-      <Suspense fallback={
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-center">
-            <div className="text-lg font-medium">読み込み中...</div>
-            <div className="mt-2 text-sm text-muted-foreground">コンテンツを準備しています</div>
-          </div>
-        </div>
-      }>
+      <Suspense fallback={<Loading message="コンテンツを準備しています" />}>
         <CasesSection />
       </Suspense>
       <Footer />

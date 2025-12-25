@@ -4,17 +4,15 @@ import { useState, useEffect, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { 
-  getAllCases, 
   addCase, 
   updateCase, 
   deleteCase, 
   reorderCases,
   CaseRecord,
-  getAllImages,
   ImageRecordWithBlob,
   getImageById,
 } from "@/lib/db"
-import { initializeApp } from "@/lib/init"
+import { loadManageData } from "@/lib/data-loader"
 import { CaseListItem } from "@/components/case-list-item"
 import { Input } from "@/components/ui/input"
 import { v4 as uuidv4 } from "uuid"
@@ -44,28 +42,10 @@ export function ManageContent() {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      // 初回起動時にデフォルトCASEをセットアップ
-      await initializeApp()
-      
-      const [casesData, imagesData] = await Promise.all([
-        getAllCases(),
-        getAllImages(),
-      ])
-      setCases(casesData)
-      setImages(imagesData)
-
-      // 各CASEが共有可能かを判定
-      const statusEntries = await Promise.all(
-        casesData.map(async (c) => {
-          const [beforeImage, afterImage] = await Promise.all([
-            c.beforeImageId ? getImageById(c.beforeImageId) : Promise.resolve(null),
-            c.afterImageId ? getImageById(c.afterImageId) : Promise.resolve(null),
-          ])
-          return [c.id, !!(beforeImage?.sourceUrl && afterImage?.sourceUrl)] as const
-        })
-      )
-      const statusMap: Record<string, boolean> = Object.fromEntries(statusEntries)
-      setShareableStatus(statusMap)
+      const data = await loadManageData()
+      setCases(data.cases)
+      setImages(data.images)
+      setShareableStatus(data.shareableStatus)
     } catch (error) {
       console.error("Failed to load data:", error)
     } finally {

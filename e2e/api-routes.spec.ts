@@ -8,7 +8,7 @@ test.describe('API Routes - fetch-image', () => {
       }
     });
 
-    expect(response.status()).toBe(403);
+    expect(response.status()).toBe(400); // 無効なURL形式は400
     const data = await response.json();
     expect(data.error).toBeTruthy();
     expect(data.error).toContain('無効なURL形式');

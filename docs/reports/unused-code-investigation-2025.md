@@ -59,15 +59,15 @@
 
 以下の関数は実際に使用されているため、問題ありません：
 
-- ✅ `loadManageData` - `components/manage-case-list.tsx`で使用
-- ✅ `dataCache` - `components/manage-case-list.tsx`で使用
-- ✅ `withRetry` - `lib/data-loader.ts`、`components/cases-section.tsx`で使用
+- ✅ `loadManageData` - `components/manage-content.tsx`で使用
+- ✅ `withRetry` - `components/cases-section.tsx`で使用
 - ✅ `isWebKitBrowser` - `lib/browser.ts`内で`withRetry`から使用
 - ✅ `sleep` - `lib/browser.ts`内で`withRetry`から使用、`lib/init.ts`でも使用
 - ✅ `getImageById` - 複数のコンポーネントで使用
 - ✅ `resetDBInstance` - `lib/init.ts`で動的インポートで使用
 - ✅ `clearAllData` - `components/image-library.tsx`で使用
 - ✅ `blobToFile` - `lib/image-utils.ts`内で`fetchAndResizeImage`から使用
+- ✅ `fetchImageAction` - `lib/image-utils.ts`および`app/api/fetch-image/route.ts`で使用
 
 ---
 
