@@ -1,10 +1,19 @@
 /**
  * 共有リンク用のデータ型定義とエンコード/デコード機能
+ * バージョニングにより後方互換性を確保
  */
 
 import { ALLOWED_HOSTNAMES } from '@/lib/constants';
+import { AppErrors, type AppError } from '@/lib/types/errors';
+
+/**
+ * 共有データのバージョン
+ */
+export const SHARE_DATA_VERSION = 1
 
 export interface SharedCaseData {
+  /** バージョン番号（将来の拡張に備えて） */
+  version?: number
   title?: string
   description?: string
   beforeUrl: string
@@ -26,11 +35,31 @@ export interface SharedCaseData {
 }
 
 /**
+ * 共有データのエンコード結果
+ */
+export type EncodeResult = 
+  | { success: true; encoded: string }
+  | { success: false; error: AppError }
+
+/**
+ * 共有データのデコード結果
+ */
+export type DecodeResult = 
+  | { success: true; data: SharedCaseData }
+  | { success: false; error: AppError }
+
+/**
  * 共有データをURLハッシュ用の文字列にエンコード
  */
-export function encodeSharedCase(data: SharedCaseData): string {
+export function encodeSharedCase(data: SharedCaseData): EncodeResult {
   try {
-    const json = JSON.stringify(data)
+    // バージョン情報を追加
+    const versionedData: SharedCaseData = {
+      ...data,
+      version: SHARE_DATA_VERSION,
+    }
+    
+    const json = JSON.stringify(versionedData)
     // UTF-8バイト列に変換してからBase64エンコード
     const encoder = new TextEncoder()
     const uint8Array = encoder.encode(json)
@@ -38,16 +67,20 @@ export function encodeSharedCase(data: SharedCaseData): string {
     const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('')
     const base64 = btoa(binaryString)
     // URL-safe Base64に変換（+ を - に、/ を _ に置き換え、末尾の = を削除）
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  } catch {
-    throw new Error('共有リンクの生成に失敗しました')
+    const encoded = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    return { success: true, encoded }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: AppErrors.internalError('共有リンクの生成に失敗しました', error) 
+    }
   }
 }
 
 /**
- * URLハッシュから共有データをデコード
+ * URLハッシュから共有データをデコード（バージョン対応）
  */
-export function decodeSharedCase(encoded: string): SharedCaseData | null {
+export function decodeSharedCase(encoded: string): DecodeResult {
   try {
     // Step 1: URL-safe Base64を通常のBase64に変換（- を + に、_ を / に置き換え）
     // パディング（=）を追加（Base64文字列の長さが4の倍数になるように）
@@ -70,19 +103,49 @@ export function decodeSharedCase(encoded: string): SharedCaseData | null {
     // Step 4: JSON parse
     const data = JSON.parse(json) as SharedCaseData
     
+    // バージョンチェックと後方互換性処理
+    const version = data.version || 0  // バージョンがない場合は0（旧形式）
+    
+    if (version > SHARE_DATA_VERSION) {
+      // 未来のバージョン: 警告を出すが処理は続行
+      console.warn(`Share data version ${version} is newer than supported version ${SHARE_DATA_VERSION}`)
+    }
+    
     // 必須フィールドの検証
     if (!data.beforeUrl || !data.afterUrl) {
-      throw new Error('共有データが不正です: 画像URLが見つかりません')
+      return { 
+        success: false, 
+        error: AppErrors.invalidShareData('画像URLが見つかりません') 
+      }
     }
     
     // URLの形式チェック（https のみ許可）
     if (!isValidImageUrl(data.beforeUrl) || !isValidImageUrl(data.afterUrl)) {
-      throw new Error('画像URLが不正です: HTTPSのURLのみ許可されています')
+      return { 
+        success: false, 
+        error: AppErrors.invalidShareData('HTTPSのURLのみ許可されています') 
+      }
     }
     
-    return data
-  } catch {
-    return null
+    // バージョン0（旧形式）の場合はデフォルト値を補完
+    if (version === 0) {
+      // 将来的に必要になった場合のための処理（現在は不要）
+    }
+    
+    return { success: true, data }
+  } catch (error) {
+    // Base64デコードエラーや JSON パースエラー
+    if (error instanceof Error && 
+        (error.name === 'InvalidCharacterError' || error.message.includes('JSON'))) {
+      return { 
+        success: false, 
+        error: AppErrors.shareDecodeError() 
+      }
+    }
+    return { 
+      success: false, 
+      error: AppErrors.invalidShareData('共有データの形式が不正です') 
+    }
   }
 }
 
@@ -137,16 +200,20 @@ export function convertGoogleDriveUrl(url: string): string {
  * @param baseUrl ベースURL（省略時は現在のオリジン）
  * @param useSharePage 共有専用ページ（/share/[encoded]）を使用するか（デフォルト: true）
  */
-export function generateShareUrl(data: SharedCaseData, baseUrl?: string, useSharePage: boolean = true): string {
+export function generateShareUrl(data: SharedCaseData, baseUrl?: string, useSharePage: boolean = true): string | null {
   const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')
-  const encoded = encodeSharedCase(data)
+  const encodeResult = encodeSharedCase(data)
+  
+  if (!encodeResult.success) {
+    return null
+  }
   
   if (useSharePage) {
     // 新しい形式: /share/[encoded]（OG画像対応）
-    return `${base}/share/${encoded}`
+    return `${base}/share/${encodeResult.encoded}`
   } else {
     // 旧形式: #share=[encoded]（後方互換性のため残す）
-    return `${base}#share=${encoded}`
+    return `${base}#share=${encodeResult.encoded}`
   }
 }
 
@@ -160,5 +227,6 @@ export function getSharedCaseFromUrl(): SharedCaseData | null {
   if (!hash.startsWith('#share=')) return null
   
   const encoded = hash.substring(7) // '#share=' を除去
-  return decodeSharedCase(encoded)
+  const result = decodeSharedCase(encoded)
+  return result.success ? result.data : null
 }

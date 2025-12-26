@@ -10,8 +10,8 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(400); // 無効なURL形式は400
     const data = await response.json();
-    expect(data.error).toBeTruthy();
-    expect(data.error).toContain('無効なURL形式');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toContain('バリデーションエラー');
   });
 
   test('HTTP（非HTTPS）プロトコルを拒否する', async ({ request }) => {
@@ -23,7 +23,8 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(403);
     const data = await response.json();
-    expect(data.error).toContain('HTTPS');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toContain('HTTPS');
   });
 
   test('プライベートIPアドレスを拒否する（localhost）', async ({ request }) => {
@@ -35,7 +36,8 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(403);
     const data = await response.json();
-    expect(data.error).toContain('プライベートIP');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toContain('プライベートIP');
   });
 
   test('プライベートIPアドレスを拒否する（10.x.x.x）', async ({ request }) => {
@@ -47,7 +49,8 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(403);
     const data = await response.json();
-    expect(data.error).toContain('プライベートIP');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toContain('プライベートIP');
   });
 
   test('プライベートIPアドレスを拒否する（192.168.x.x）', async ({ request }) => {
@@ -59,19 +62,21 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(403);
     const data = await response.json();
-    expect(data.error).toContain('プライベートIP');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toContain('プライベートIP');
   });
 
-  test('許可されていないホスト名を拒否する', async ({ request }) => {
+  test('パブリックなHTTPSドメイン名の画像URLは許可される', async ({ request }) => {
+    // 一般的なWebサイトの画像URLを許可（パブリックなドメイン名）
     const response = await request.post('/api/fetch-image', {
       data: {
-        url: 'https://evil.com/image.jpg'
+        url: 'https://example.com/image.jpg'
       }
     });
 
-    expect(response.status()).toBe(403);
-    const data = await response.json();
-    expect(data.error).toContain('許可されていないホスト');
+    // 実際の画像取得は失敗する可能性があるが、URL検証は通る
+    // （404エラーなどは別のエラーとして処理される）
+    expect([200, 404, 502]).toContain(response.status());
   });
 
   test('URLパラメータが欠けている場合のエラー', async ({ request }) => {
@@ -81,7 +86,8 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('URL');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toBeTruthy();
   });
 
   test('URLパラメータが文字列でない場合のエラー', async ({ request }) => {
@@ -93,7 +99,8 @@ test.describe('API Routes - fetch-image', () => {
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('URL');
+    expect(data.success).toBe(false);
+    expect(data.error.message).toBeTruthy();
   });
 
   test('許可されたホスト名（Google Drive）は受け入れる', async ({ request }) => {

@@ -10,15 +10,16 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { encoded } = await params
-  const shareData = decodeSharedCase(encoded)
+  const decodeResult = decodeSharedCase(encoded)
 
-  if (!shareData) {
+  if (!decodeResult.success) {
     return {
       title: "劇的ビフォー/アフターツール - NEUTRAL COMPARE",
       description: "設計レビューおよび施主様への確認用ツール。",
     }
   }
 
+  const shareData = decodeResult.data
   const title = shareData.title || "Before/After比較"
   const description = shareData.description || "スライダーによる直感的な比較が可能です。"
   const ogImageUrl = `/api/og?share=${encodeURIComponent(encoded)}`
@@ -50,9 +51,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SharePage({ params }: Props) {
   const { encoded } = await params
-  const shareData = decodeSharedCase(encoded)
+  const decodeResult = decodeSharedCase(encoded)
   
-  if (!shareData) {
+  if (!decodeResult.success) {
     return (
       <main className="min-h-screen bg-background">
         <Header />
@@ -60,7 +61,7 @@ export default async function SharePage({ params }: Props) {
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6">
             <h2 className="text-base font-semibold text-foreground">共有リンクの解析に失敗しました</h2>
             <p className="mt-2 text-sm text-destructive">
-              URLが正しいか確認してください。
+              {decodeResult.error.message}
             </p>
           </div>
         </div>

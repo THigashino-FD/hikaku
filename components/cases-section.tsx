@@ -21,6 +21,7 @@ import { getSharedCaseFromUrl, decodeSharedCase, convertGoogleDriveUrl, type Sha
 import { fetchAndResizeImage, fetchImageFromUrl } from "@/lib/image-utils"
 import { IMAGE_CONSTANTS } from "@/lib/constants"
 import { logger } from "@/lib/logger"
+import { toUserMessage, type AppError } from "@/lib/types/errors"
 import { v4 as uuidv4 } from "uuid"
 
 interface CasesSectionProps {
@@ -74,7 +75,14 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
 
       if (hash && hash.startsWith('#share=')) {
         const encoded = hash.substring(7) // '#share=' を除去
-        sharedData = decodeSharedCase(encoded)
+        const decodeResult = decodeSharedCase(encoded)
+        if (decodeResult.success) {
+          sharedData = decodeResult.data
+        } else {
+          setSharedCase(null)
+          setShareError(toUserMessage(decodeResult.error))
+          return
+        }
       } else {
         sharedData = getSharedCaseFromUrl()
       }
@@ -85,13 +93,8 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
         return
       }
 
-      try {
-        setSharedCase(sharedData)
-        setShareError("")
-      } catch {
-        setSharedCase(null)
-        setShareError("共有リンクの解析に失敗しました。URLが正しいか確認してください。")
-      }
+      setSharedCase(sharedData)
+      setShareError("")
     }
 
     parse()
@@ -119,6 +122,10 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
 
     let cancelled = false
     const run = async () => {
+      // #region agent log
+      const startTime = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cases-section.tsx:124',message:'Share preview image fetch start',data:{beforeUrl:beforeUrl.substring(0,50),afterUrl:afterUrl.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       setIsLoadingSharePreview(true)
       setSharePreviewBefore("")
       setSharePreviewAfter("")
@@ -127,10 +134,18 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
         const normalizedBefore = convertGoogleDriveUrl(beforeUrl)
         const normalizedAfter = convertGoogleDriveUrl(afterUrl)
 
+        // #region agent log
+        const fetchStartTime = Date.now();
+        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cases-section.tsx:133',message:'Promise.all fetchImages start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         const [beforeBlob, afterBlob] = await Promise.all([
           fetchImageFromUrl(normalizedBefore),
           fetchImageFromUrl(normalizedAfter),
         ])
+        // #region agent log
+        const fetchEndTime = Date.now();
+        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cases-section.tsx:137',message:'Promise.all fetchImages complete',data:{duration:fetchEndTime-fetchStartTime,beforeSize:beforeBlob.size,afterSize:afterBlob.size},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
 
         if (cancelled) return
 
@@ -142,9 +157,25 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
         sharePreviewAfterRef.current = afterObjectUrl
         setSharePreviewBefore(beforeObjectUrl)
         setSharePreviewAfter(afterObjectUrl)
+        // #region agent log
+        const endTime = Date.now();
+        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cases-section.tsx:150',message:'Share preview complete',data:{totalDuration:endTime-startTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
       } catch (e: unknown) {
         if (cancelled) return
-        const msg = e instanceof Error ? e.message : "共有プレビュー画像の取得に失敗しました。"
+        // #region agent log
+        const errorTime = Date.now();
+        fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cases-section.tsx:154',message:'Share preview error',data:{totalDuration:errorTime-startTime,error:typeof e==='object'&&e!==null&&'code' in e?(e as {code:string}).code:e instanceof Error?e.message:'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        // AppError の場合はユーザー向けメッセージに変換
+        let msg: string
+        if (typeof e === 'object' && e !== null && 'code' in e) {
+          msg = toUserMessage(e as AppError)
+        } else if (e instanceof Error) {
+          msg = e.message
+        } else {
+          msg = "共有プレビュー画像の取得に失敗しました。"
+        }
         setShareError(msg)
       } finally {
         if (!cancelled) setIsLoadingSharePreview(false)
@@ -235,8 +266,15 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       await loadCases()
       closeSharePreview()
     } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "共有CASEの保存に失敗しました。"
+      // AppError の場合はユーザー向けメッセージに変換
+      let message: string
+      if (typeof e === 'object' && e !== null && 'code' in e) {
+        message = toUserMessage(e as AppError)
+      } else if (e instanceof Error) {
+        message = e.message
+      } else {
+        message = "共有CASEの保存に失敗しました。"
+      }
       setShareError(message)
     } finally {
       setIsImportingShare(false)

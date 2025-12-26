@@ -1,4 +1,6 @@
 import { IMAGE_CONSTANTS } from '@/lib/constants';
+import { AppErrors, type AppError } from '@/lib/types/errors';
+import { withRetry, IMAGE_FETCH_RETRY_CONFIG } from '@/lib/retry';
 
 /**
  * FileをImageオブジェクトとして読み込む
@@ -109,54 +111,71 @@ export function isAllowedImageType(file: File): boolean {
 }
 
 /**
- * URLから画像を取得してBlobとして返す
+ * 画像取得結果
+ */
+export type FetchImageResult = 
+  | { success: true; blob: Blob }
+  | { success: false; error: AppError }
+
+/**
+ * URLから画像を取得してBlobとして返す（Server Action経由、リトライ付き）
+ * CORS制限を回避するため、Server Action経由で取得します
  */
 export async function fetchImageFromUrl(url: string): Promise<Blob> {
-  try {
-    const response = await fetch(url, {
-      mode: 'cors',
-      credentials: 'omit',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`画像の取得に失敗しました (HTTP ${response.status}): ${response.statusText}`);
-    }
-    
-    const blob = await response.blob();
-    
-    // 画像形式の確認
-    if (!blob.type.startsWith('image/')) {
-      throw new Error(`取得したコンテンツは画像ではありません (Content-Type: ${blob.type}). Google Driveの共有ページURLではなく、画像として直接アクセスできるURLを使用してください。`);
-    }
-    
-    return blob;
-  } catch (error: unknown) {
-    // ネットワークエラー（CORS含む）の詳細化
-    if (error instanceof Error && (error.message.includes('Failed to fetch') || error.name === 'TypeError')) {
-      // CORSエラーの場合、Server Action経由で再試行
-      try {
-        const { fetchImageAction } = await import('@/app/actions/fetch-image')
-        const result = await fetchImageAction(url)
-
-        if (result.error) {
-          throw new Error(result.error)
-        }
-
-        if (!result.dataUrl) {
-          throw new Error('画像の取得に失敗しました')
-        }
-        
-        // Data URLからBlobに変換
-        const response = await fetch(result.dataUrl)
-        const blob = await response.blob()
-        
-        return blob
-      } catch {
-        throw new Error('画像の取得に失敗しました。CORS（Cross-Origin）制約、またはネットワークエラーの可能性があります。Google Driveを使用している場合は、共有設定を「リンクを知っている全員」にして、直接ダウンロード用のURLを使用してください。')
+  // #region agent log
+  const fetchStartTime = Date.now();
+  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:123',message:'fetchImageFromUrl start',data:{url:url.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  // Server Action経由で取得（CORS回避、リトライ付き）
+  const retryResult = await withRetry(
+    async () => {
+      // #region agent log
+      const serverActionStart = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:130',message:'Server Action start',data:{url:url.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
+      const { fetchImageAction } = await import('@/app/actions/fetch-image')
+      const result = await fetchImageAction(url)
+      
+      if (!result.success) {
+        throw result.error
       }
-    }
-    throw error
+      
+      // #region agent log
+      const serverActionEnd = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:140',message:'Server Action complete',data:{duration:serverActionEnd-serverActionStart},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
+      return result.data
+    },
+    IMAGE_FETCH_RETRY_CONFIG
+  )
+  
+  if (!retryResult.success) {
+    // #region agent log
+    const fetchEndTime = Date.now();
+    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:150',message:'fetchImageFromUrl failed',data:{duration:fetchEndTime-fetchStartTime,attempts:retryResult.attempts,errorCode:retryResult.error.code},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    throw retryResult.error
   }
+
+  // #region agent log
+  const dataUrlFetchStart = Date.now();
+  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:155',message:'Data URL to Blob conversion start',data:{dataUrlLength:retryResult.data.dataUrl.length},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
+  
+  // Data URLからBlobに変換
+  const response = await fetch(retryResult.data.dataUrl)
+  const blob = await response.blob()
+  
+  // #region agent log
+  const dataUrlFetchEnd = Date.now();
+  const fetchEndTime = Date.now();
+  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:162',message:'fetchImageFromUrl complete',data:{duration:fetchEndTime-fetchStartTime,attempts:retryResult.attempts,blobSize:blob.size,conversionDuration:dataUrlFetchEnd-dataUrlFetchStart},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  return blob
 }
 
 /**
@@ -179,7 +198,7 @@ export async function fetchAndResizeImage(
   height: number;
   type: string;
 }> {
-  // URLから画像を取得
+  // URLから画像を取得（リトライ＆フォールバック付き）
   const originalBlob = await fetchImageFromUrl(url);
   
   // BlobからFileを作成（resizeImage関数がFile型を期待しているため）

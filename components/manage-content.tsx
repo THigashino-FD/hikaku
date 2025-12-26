@@ -199,6 +199,9 @@ export function ManageContent() {
       }
 
       const url = generateShareUrl(shareData)
+      if (!url) {
+        throw new Error('共有リンクの生成に失敗しました')
+      }
       setShareLink(url)
       setSharingCase(caseRecord)
     } catch (error) {
