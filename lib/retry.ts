@@ -163,19 +163,11 @@ export async function withRetry<T>(
       }
     }
 
-    // #region agent log
-    const attemptStartTime = Date.now();
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:167',message:'Retry attempt start',data:{attempt,timeout:cfg.timeout},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     try {
       logger.debug(`Retry attempt ${attempt}/${cfg.maxAttempts}`)
       
       // タイムアウト付きで実行
       const data = await withTimeout(fn(), cfg.timeout, signal)
-      // #region agent log
-      const attemptEndTime = Date.now();
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:175',message:'Retry attempt success',data:{attempt,duration:attemptEndTime-attemptStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       
       logger.debug(`Retry succeeded on attempt ${attempt}`)
       return { success: true, data, attempts: attempt }
@@ -197,10 +189,6 @@ export async function withRetry<T>(
 
       lastError = appError
       logger.debug(`Retry attempt ${attempt} failed:`, appError.message)
-      // #region agent log
-      const attemptEndTime = Date.now();
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:195',message:'Retry attempt failed',data:{attempt,duration:attemptEndTime-attemptStartTime,errorCode:appError.code,retryable:appError.retryable},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
 
       // リトライ可否判定
       const shouldRetry = cfg.shouldRetry ? cfg.shouldRetry(appError) : false
@@ -217,9 +205,6 @@ export async function withRetry<T>(
         cfg.initialDelay * Math.pow(cfg.backoffMultiplier, attempt - 1),
         cfg.maxDelay
       )
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:189',message:'Waiting before retry',data:{delayMs,attempt},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       
       logger.debug(`Waiting ${delayMs}ms before retry...`)
       await delay(delayMs)
@@ -258,24 +243,12 @@ export async function withFallback<T>(
 ): Promise<RetryResult<T>> {
   const errors: AppError[] = []
   let totalAttempts = 0
-  // #region agent log
-  const fallbackStartTime = Date.now();
-  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:268',message:'withFallback start',data:{optionsCount:fns.length},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
 
   for (let i = 0; i < fns.length; i++) {
     logger.debug(`Trying fallback option ${i + 1}/${fns.length}`)
-    // #region agent log
-    const optionStartTime = Date.now();
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:274',message:'Fallback option start',data:{optionIndex:i+1,totalOptions:fns.length},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     
     const result = await withRetry(fns[i], config)
     totalAttempts += result.attempts
-    // #region agent log
-    const optionEndTime = Date.now();
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:279',message:'Fallback option complete',data:{optionIndex:i+1,success:result.success,duration:optionEndTime-optionStartTime,attempts:result.attempts},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     if (result.success) {
       logger.debug(`Fallback succeeded on option ${i + 1}`)
@@ -283,10 +256,6 @@ export async function withFallback<T>(
       if (i > 0) {
         logger.warn(`Fallback option ${i + 1} succeeded after ${i} previous attempts failed`)
       }
-      // #region agent log
-      const fallbackEndTime = Date.now();
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:288',message:'withFallback success',data:{totalDuration:fallbackEndTime-fallbackStartTime,succeededOption:i+1,totalAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return { ...result, attempts: totalAttempts }
     }
 
@@ -296,10 +265,6 @@ export async function withFallback<T>(
 
   // すべての選択肢が失敗した場合のみエラーログを出力
   const lastError = errors[errors.length - 1]
-  // #region agent log
-  const fallbackEndTime = Date.now();
-  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'retry.ts:300',message:'withFallback all failed',data:{totalDuration:fallbackEndTime-fallbackStartTime,totalAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   logger.error(`All fallback options failed after ${totalAttempts} total attempts`, lastError)
   return {
     success: false,

@@ -122,19 +122,9 @@ export type FetchImageResult =
  * CORS制限を回避するため、Server Action経由で取得します
  */
 export async function fetchImageFromUrl(url: string): Promise<Blob> {
-  // #region agent log
-  const fetchStartTime = Date.now();
-  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:123',message:'fetchImageFromUrl start',data:{url:url.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
-  
   // Server Action経由で取得（CORS回避、リトライ付き）
   const retryResult = await withRetry(
     async () => {
-      // #region agent log
-      const serverActionStart = Date.now();
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:130',message:'Server Action start',data:{url:url.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       const { fetchImageAction } = await import('@/app/actions/fetch-image')
       const result = await fetchImageAction(url)
       
@@ -142,38 +132,18 @@ export async function fetchImageFromUrl(url: string): Promise<Blob> {
         throw result.error
       }
       
-      // #region agent log
-      const serverActionEnd = Date.now();
-      fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:140',message:'Server Action complete',data:{duration:serverActionEnd-serverActionStart},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       return result.data
     },
     IMAGE_FETCH_RETRY_CONFIG
   )
   
   if (!retryResult.success) {
-    // #region agent log
-    const fetchEndTime = Date.now();
-    fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:150',message:'fetchImageFromUrl failed',data:{duration:fetchEndTime-fetchStartTime,attempts:retryResult.attempts,errorCode:retryResult.error.code},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     throw retryResult.error
   }
 
-  // #region agent log
-  const dataUrlFetchStart = Date.now();
-  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:155',message:'Data URL to Blob conversion start',data:{dataUrlLength:retryResult.data.dataUrl.length},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
-  
   // Data URLからBlobに変換
   const response = await fetch(retryResult.data.dataUrl)
   const blob = await response.blob()
-  
-  // #region agent log
-  const dataUrlFetchEnd = Date.now();
-  const fetchEndTime = Date.now();
-  fetch('http://127.0.0.1:7242/ingest/434cdba6-86e2-4549-920e-ecd270128146',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'image-utils.ts:162',message:'fetchImageFromUrl complete',data:{duration:fetchEndTime-fetchStartTime,attempts:retryResult.attempts,blobSize:blob.size,conversionDuration:dataUrlFetchEnd-dataUrlFetchStart},timestamp:Date.now(),sessionId:'debug-session',runId:'perf-3',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   
   return blob
 }
