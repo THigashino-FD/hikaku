@@ -10,15 +10,15 @@ async function fileToImage(file: File): Promise<HTMLImageElement> {
 
     reader.onload = (e) => {
       if (!e.target?.result) {
-        reject(new Error('Failed to read file'));
+        reject(new Error('ファイルの読み込みに失敗しました'));
         return;
       }
       img.src = e.target.result as string;
     };
 
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load image'));
-    reader.onerror = () => reject(new Error('Failed to read file'));
+    img.onerror = () => reject(new Error('画像の読み込みに失敗しました'));
+    reader.onerror = () => reject(new Error('ファイルの読み込みに失敗しました'));
 
     reader.readAsDataURL(file);
   });
@@ -63,7 +63,7 @@ export async function resizeImage(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    throw new Error('Failed to get canvas context');
+    throw new Error('Canvas contextの取得に失敗しました');
   }
 
   ctx.drawImage(img, 0, 0, width, height);
@@ -72,7 +72,7 @@ export async function resizeImage(
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          reject(new Error('Failed to create blob'));
+          reject(new Error('Blobの作成に失敗しました'));
           return;
         }
 

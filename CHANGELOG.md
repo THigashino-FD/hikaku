@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Localization
+- エラーメッセージの日本語化
+  - lib/init.ts: 画像取得、オブジェクトURL作成、画像読み込み、CASE保存確認のエラー
+  - lib/image-utils.ts: ファイル読み込み、画像読み込み、Canvas context取得、Blob作成のエラー
+  - lib/share.ts: 共有データ検証、画像URL検証のエラー
+  - lib/db.ts: IndexedDB利用可否のエラー
+  - 日本向けサービスとして、すべてのユーザー向けエラーメッセージを日本語に統一
+
 ### Performance
 - モーダルコンポーネントの動的インポート化
   - `ImageLibrary` と `CaseEditor` を遅延読み込みに変更

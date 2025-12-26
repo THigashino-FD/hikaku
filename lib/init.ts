@@ -18,7 +18,7 @@ async function fetchImageAsBlob(url: string): Promise<Blob> {
   try {
     const response = await fetch(absoluteUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${url} (${response.status})`);
+      throw new Error(`画像の取得に失敗しました: ${url} (${response.status})`);
     }
     return await response.blob();
   } catch (error) {
@@ -38,7 +38,7 @@ async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; 
     try {
       url = URL.createObjectURL(blob);
     } catch {
-      reject(new Error('Failed to create object URL'));
+      reject(new Error('オブジェクトURLの作成に失敗しました'));
       return;
     }
 
@@ -49,7 +49,7 @@ async function getImageDimensionsFromBlob(blob: Blob): Promise<{ width: number; 
 
     img.onerror = () => {
       if (url) URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
+      reject(new Error('画像の読み込みに失敗しました'));
     };
 
     img.src = url!;
@@ -225,7 +225,7 @@ export async function setupDefaultCases(): Promise<void> {
       await new Promise(resolve => setTimeout(resolve, 100));
       const all = await getAllCases();
       if (!all.find(item => item.id === c.id)) {
-        throw new Error(`Failed to verify case save: ${c.title}`);
+        throw new Error(`CASE保存の確認に失敗しました: ${c.title}`);
       }
     };
 

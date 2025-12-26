@@ -72,12 +72,12 @@ export function decodeSharedCase(encoded: string): SharedCaseData | null {
     
     // 必須フィールドの検証
     if (!data.beforeUrl || !data.afterUrl) {
-      throw new Error('Invalid shared case data: missing image URLs')
+      throw new Error('共有データが不正です: 画像URLが見つかりません')
     }
     
     // URLの形式チェック（https のみ許可）
     if (!isValidImageUrl(data.beforeUrl) || !isValidImageUrl(data.afterUrl)) {
-      throw new Error('Invalid image URLs: only HTTPS URLs are allowed')
+      throw new Error('画像URLが不正です: HTTPSのURLのみ許可されています')
     }
     
     return data
