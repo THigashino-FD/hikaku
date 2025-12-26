@@ -22,6 +22,7 @@ import { convertGoogleDriveUrl } from "@/lib/share"
 import { useToast } from "@/components/ui/toast"
 import { IMAGE_CONSTANTS, ALLOWED_HOSTNAMES } from "@/lib/constants"
 import { logger } from "@/lib/logger"
+import { type AppError } from "@/lib/types/errors"
 
 interface ImageLibraryProps {
   onClose: () => void
@@ -49,9 +50,13 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
     try {
       const urlObj = new URL(url)
       
-      // プロトコルチェック
+      // プロトコルチェック（HTTPSのみ許可）
+      if (urlObj.protocol === 'http:') {
+        return { valid: false, message: "⚠️ HTTPSのURLのみ使用可能です。セキュリティ上の理由により、HTTPは許可されていません。" }
+      }
+      
       if (!["http:", "https:"].includes(urlObj.protocol)) {
-        return { valid: false, message: "http:// または https:// で始まるURLを入力してください" }
+        return { valid: false, message: "https:// で始まるURLを入力してください" }
       }
 
       // 画像拡張子チェック（簡易）
@@ -203,7 +208,41 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       showToast("URLから画像を追加しました", "success")
     } catch (error) {
       logger.error("Failed to add image from URL:", error)
-      showToast(`URLからの画像追加に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`, "error")
+      
+      // AppErrorの場合はユーザー向けメッセージを取得
+      let errorMessage = '不明なエラー'
+      if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
+        // AppErrorの場合
+        try {
+          const appError = error as AppError
+          // messageプロパティを直接使用（toUserMessageは改行を含む可能性があるため）
+          errorMessage = appError.message || '不明なエラー'
+          // userActionがあれば追加情報として含める（トーストでは1行目のみ表示）
+        } catch {
+          errorMessage = '不明なエラー'
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message || '不明なエラー'
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      } else {
+        // その他の場合（オブジェクトなど）は文字列化を試みる
+        try {
+          const errorStr = JSON.stringify(error)
+          // 空のオブジェクトの場合はデフォルトメッセージを使用
+          if (errorStr === '{}' || errorStr === 'null') {
+            errorMessage = '不明なエラーが発生しました'
+          } else {
+            errorMessage = errorStr
+          }
+        } catch {
+          errorMessage = '不明なエラー'
+        }
+      }
+      
+      // トーストメッセージは1行で表示（改行は含めない）
+      const toastMessage = errorMessage.split('\n')[0].trim() || '不明なエラー'
+      showToast(`URLからの画像追加に失敗しました: ${toastMessage}`, "error")
     } finally {
       setIsAddingFromUrl(false)
     }
