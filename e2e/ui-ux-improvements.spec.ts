@@ -178,11 +178,6 @@ test.describe('UI/UX改善機能のテスト', () => {
         await page.getByRole('button', { name: /画像ライブラリ/ }).click()
         await page.waitForTimeout(500)
 
-        // 最初のフォーカス可能要素を取得
-        const firstFocusable = await page.evaluate(() => {
-          return document.activeElement?.getAttribute('aria-label')
-        })
-
         // Tabキーを数回押す
         await page.keyboard.press('Tab')
         await page.waitForTimeout(100)

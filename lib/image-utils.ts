@@ -1,5 +1,5 @@
 import { IMAGE_CONSTANTS } from '@/lib/constants';
-import { AppErrors, type AppError } from '@/lib/types/errors';
+import { type AppError } from '@/lib/types/errors';
 import { withRetry, IMAGE_FETCH_RETRY_CONFIG } from '@/lib/retry';
 
 /**

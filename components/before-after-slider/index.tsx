@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Input } from "@/components/ui/input"
 import { SafeImage } from "@/components/safe-image"
 import { useToast } from "@/components/ui/toast"
+import { AdjustmentPanel } from "./adjustment-panel"
+import { useRevealAnimation } from "./hooks/use-reveal-animation"
 
 interface BeforeAfterSliderProps {
   beforeImage: string
@@ -69,13 +69,10 @@ export function BeforeAfterSlider({
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>(initialComparisonMode)
   const [beforeImageLoaded, setBeforeImageLoaded] = useState(false)
   const [afterImageLoaded, setAfterImageLoaded] = useState(false)
-  const [animationCancelled, setAnimationCancelled] = useState(false)
   const [panelMode, setPanelMode] = useState<"none" | "adjust">("none")
   
   const containerRef = useRef<HTMLDivElement>(null)
   const fullscreenRef = useRef<HTMLDivElement>(null)
-  const animationFrameRef = useRef<number | null>(null)
-  const isAnimatingRef = useRef(false) // ロジック制御用のRef
 
   const displayBeforeImage = beforeImage
   const displayAfterImage = afterImage
@@ -99,108 +96,17 @@ export function BeforeAfterSlider({
   useEffect(() => {
     setBeforeImageLoaded(false)
     setAfterImageLoaded(false)
-    setAnimationCancelled(false)
   }, [displayBeforeImage, displayAfterImage, beforeImageKey, afterImageKey])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // アニメーションをキャンセルする関数
-  const cancelAnimation = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
-    }
-    isAnimatingRef.current = false
-    setAnimationCancelled(true)
-  }
-
-  // 初期表示アニメーション（自動リベール）
-  // 目的: 「スライダーを動かすと Before/After を理解できる」ことを、1回のデモで伝える
-  // 方針: 初期位置→(After側を見せる)→初期位置→(Before側を見せる)→初期位置（途中で少し止める）
-  useEffect(() => {
-    // animationTypeが'demo'以外の場合はアニメーションを実行しない
-    if (animationType !== 'demo') {
-      return
-    }
-
-    // 既にキャンセルされているか、既に実行中の場合は何もしない
-    if (animationCancelled || isAnimatingRef.current) {
-      return
-    }
-
-    // OS設定で「視差効果を減らす」を尊重
-    const prefersReducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
-    if (prefersReducedMotion) {
-      return
-    }
-
-    let startTime: number | null = null
-
-    // 初期位置を基準に、左右に30%ずつ動く（より大きく）
-    const basePos = initialSliderPosition
-    const rightPos = Math.min(basePos + 30, 100)
-    const leftPos = Math.max(basePos - 30, 0)
-
-    // タイムライン（ms）: "止まる"を挟んで、Before/Afterが切り替わることを認知しやすくする（よりゆっくり）
-    const keyframes: Array<{ t: number; pos: number }> = [
-      { t: 0, pos: basePos },
-      { t: 400, pos: basePos },
-      { t: 1800, pos: rightPos },
-      { t: 2200, pos: rightPos },
-      { t: 3600, pos: leftPos },
-      { t: 4000, pos: leftPos },
-      { t: 6000, pos: basePos },
-    ]
-    const totalDuration = keyframes[keyframes.length - 1]!.t
-
-    const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2
-
-    const positionAt = (elapsed: number) => {
-      if (elapsed <= 0) return keyframes[0]!.pos
-      if (elapsed >= totalDuration) return keyframes[keyframes.length - 1]!.pos
-
-      for (let i = 0; i < keyframes.length - 1; i++) {
-        const a = keyframes[i]!
-        const b = keyframes[i + 1]!
-        if (elapsed >= a.t && elapsed <= b.t) {
-          if (a.pos === b.pos || b.t === a.t) return a.pos
-          const raw = (elapsed - a.t) / (b.t - a.t)
-          const eased = easeInOutSine(raw)
-          return a.pos + (b.pos - a.pos) * eased
-        }
-      }
-      return basePos
-    }
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp
-      const elapsed = timestamp - startTime
-      const pos = positionAt(elapsed)
-      setSliderPosition(pos)
-
-      if (elapsed < totalDuration && isAnimatingRef.current) {
-        animationFrameRef.current = requestAnimationFrame(animate)
-      } else {
-        setSliderPosition(basePos)
-        isAnimatingRef.current = false
-      }
-    }
-
-    // 画像が両方読み込まれてからアニメーション開始
-    if (beforeImageLoaded && afterImageLoaded) {
-      isAnimatingRef.current = true
-      animationFrameRef.current = requestAnimationFrame(animate)
-    }
-
-    return () => {
-      // ここでのクリーンアップは「本当にアンマウントされた時」または「画像URLが変わった時」に限定される
-      // ただし、depsからisAnimatingを外したことで、setIsAnimatingによる再実行は起きない
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-    }
-  }, [beforeImageLoaded, afterImageLoaded, animationType, animationCancelled, initialSliderPosition]) // animationTypeとinitialSliderPositionを追加
+  // アニメーションロジックをカスタムフックに委譲
+  const { animationCancelled, cancelAnimation } = useRevealAnimation({
+    animationType,
+    initialSliderPosition,
+    beforeImageLoaded,
+    afterImageLoaded,
+    onPositionChange: setSliderPosition,
+  })
 
   // フルスクリーン切り替え
   const toggleFullscreen = () => {
@@ -232,8 +138,8 @@ export function BeforeAfterSlider({
   const handleMove = useCallback((clientX: number) => {
     if (!containerRef.current) return
 
-    // アニメーション中の場合は中断（refを使って判定）
-    if (isAnimatingRef.current) {
+    // アニメーション中の場合は中断
+    if (!animationCancelled && animationType === 'demo') {
       cancelAnimation()
     }
 
@@ -242,12 +148,12 @@ export function BeforeAfterSlider({
     const percentage = (x / rect.width) * 100
 
     setSliderPosition(Math.min(Math.max(percentage, 0), 100))
-  }, [])
+  }, [animationCancelled, animationType, cancelAnimation])
 
   // キーボードショートカット
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // アニメーション中の場合は中断
-    if (isAnimatingRef.current) {
+    if (!animationCancelled && animationType === 'demo') {
       cancelAnimation()
     }
 
@@ -279,15 +185,15 @@ export function BeforeAfterSlider({
         setSliderPosition(50)
         break
     }
-  }, [])
+  }, [animationCancelled, animationType, cancelAnimation])
 
   const handleStart = useCallback(() => {
-    // アニメーション中の場合は中断（refを使って判定）
-    if (isAnimatingRef.current) {
+    // アニメーション中の場合は中断
+    if (!animationCancelled && animationType === 'demo') {
       cancelAnimation()
     }
     setIsDragging(true)
-  }, [])
+  }, [animationCancelled, animationType, cancelAnimation])
 
   const handleEnd = useCallback(() => {
     setIsDragging(false)
@@ -406,230 +312,23 @@ export function BeforeAfterSlider({
         </Button>
       </div>
 
-      {panelMode !== "none" && (
-        <div className="space-y-6 rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
-          {panelMode === "adjust" && (
-            <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-            {/* Before Image Controls */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">改築前の画像調整</h4>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">拡大率: {beforeScale}%</label>
-                <Slider
-                  value={[beforeScale]}
-                  onValueChange={(value) => setBeforeScale(clamp(value[0], 50, 200))}
-                  min={50}
-                  max={200}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={50}
-                    max={200}
-                    step={1}
-                    value={beforeScale}
-                    onChange={(e) => {
-                      const n = parseNumber(e.target.value)
-                      if (n === null) return
-                      setBeforeScale(clamp(Math.round(n), 50, 200))
-                    }}
-                    className="h-8 w-24 bg-background"
-                    aria-label="改築前の拡大率（%）"
-                  />
-                  <span className="text-xs text-muted-foreground">%</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">水平位置: {beforeX}px</label>
-                <Slider
-                  value={[beforeX]}
-                  onValueChange={(value) => setBeforeX(clamp(value[0], -200, 200))}
-                  min={-200}
-                  max={200}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={-200}
-                    max={200}
-                    step={1}
-                    value={beforeX}
-                    onChange={(e) => {
-                      const n = parseNumber(e.target.value)
-                      if (n === null) return
-                      setBeforeX(clamp(Math.round(n), -200, 200))
-                    }}
-                    className="h-8 w-24 bg-background"
-                    aria-label="改築前の水平位置（px）"
-                  />
-                  <span className="text-xs text-muted-foreground">px</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">垂直位置: {beforeY}px</label>
-                <Slider
-                  value={[beforeY]}
-                  onValueChange={(value) => setBeforeY(clamp(value[0], -200, 200))}
-                  min={-200}
-                  max={200}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={-200}
-                    max={200}
-                    step={1}
-                    value={beforeY}
-                    onChange={(e) => {
-                      const n = parseNumber(e.target.value)
-                      if (n === null) return
-                      setBeforeY(clamp(Math.round(n), -200, 200))
-                    }}
-                    className="h-8 w-24 bg-background"
-                    aria-label="改築前の垂直位置（px）"
-                  />
-                  <span className="text-xs text-muted-foreground">px</span>
-                </div>
-              </div>
-            </div>
-
-            {/* After Image Controls */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-foreground">改築後の画像調整</h4>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">拡大率: {afterScale}%</label>
-                <Slider
-                  value={[afterScale]}
-                  onValueChange={(value) => setAfterScale(clamp(value[0], 50, 200))}
-                  min={50}
-                  max={200}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={50}
-                    max={200}
-                    step={1}
-                    value={afterScale}
-                    onChange={(e) => {
-                      const n = parseNumber(e.target.value)
-                      if (n === null) return
-                      setAfterScale(clamp(Math.round(n), 50, 200))
-                    }}
-                    className="h-8 w-24 bg-background"
-                    aria-label="改築後の拡大率（%）"
-                  />
-                  <span className="text-xs text-muted-foreground">%</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">水平位置: {afterX}px</label>
-                <Slider
-                  value={[afterX]}
-                  onValueChange={(value) => setAfterX(clamp(value[0], -200, 200))}
-                  min={-200}
-                  max={200}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={-200}
-                    max={200}
-                    step={1}
-                    value={afterX}
-                    onChange={(e) => {
-                      const n = parseNumber(e.target.value)
-                      if (n === null) return
-                      setAfterX(clamp(Math.round(n), -200, 200))
-                    }}
-                    className="h-8 w-24 bg-background"
-                    aria-label="改築後の水平位置（px）"
-                  />
-                  <span className="text-xs text-muted-foreground">px</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">垂直位置: {afterY}px</label>
-                <Slider
-                  value={[afterY]}
-                  onValueChange={(value) => setAfterY(clamp(value[0], -200, 200))}
-                  min={-200}
-                  max={200}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={-200}
-                    max={200}
-                    step={1}
-                    value={afterY}
-                    onChange={(e) => {
-                      const n = parseNumber(e.target.value)
-                      if (n === null) return
-                      setAfterY(clamp(Math.round(n), -200, 200))
-                    }}
-                    className="h-8 w-24 bg-background"
-                    aria-label="改築後の垂直位置（px）"
-                  />
-                  <span className="text-xs text-muted-foreground">px</span>
-                </div>
-              </div>
-            </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-center gap-3">
-            <Button onClick={resetAdjustments} variant="outline" className="gap-2 bg-transparent">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              位置・縮尺をリセット
-            </Button>
-            {onSaveViewSettings && (
-              <Button onClick={handleSaveViewSettings} className="gap-2">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
-                </svg>
-                この設定を初期表示として保存
-              </Button>
-            )}
-          </div>
-        </div>
+      {panelMode === "adjust" && (
+        <AdjustmentPanel
+          beforeScale={beforeScale}
+          afterScale={afterScale}
+          beforeX={beforeX}
+          beforeY={beforeY}
+          afterX={afterX}
+          afterY={afterY}
+          onBeforeScaleChange={setBeforeScale}
+          onAfterScaleChange={setAfterScale}
+          onBeforeXChange={setBeforeX}
+          onBeforeYChange={setBeforeY}
+          onAfterXChange={setAfterX}
+          onAfterYChange={setAfterY}
+          onReset={resetAdjustments}
+          onSave={handleSaveViewSettings}
+        />
       )}
 
       {/* Comparison Container */}
@@ -639,8 +338,8 @@ export function BeforeAfterSlider({
           className={cn("relative w-full overflow-hidden rounded-xl select-none", className)}
           style={{ aspectRatio: "16/9" }}
           onClick={() => {
-            // クリックでアニメーション中断（refを使って判定）
-            if (isAnimatingRef.current) {
+            // クリックでアニメーション中断
+            if (!animationCancelled && animationType === 'demo') {
               cancelAnimation()
             }
           }}
