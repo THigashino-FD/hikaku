@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 import { NextRequest } from 'next/server'
+import { logger } from '@/lib/logger'
 import { decodeSharedCase } from '@/lib/share'
 
 export async function GET(request: NextRequest) {
@@ -193,7 +194,7 @@ export async function GET(request: NextRequest) {
       }
     )
   } catch (error) {
-    console.error('Error generating OG image:', error)
+    logger.error('Error generating OG image:', error)
     
     // エラー時のフォールバック画像
     return new ImageResponse(

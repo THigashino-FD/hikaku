@@ -1,13 +1,7 @@
 "use server"
 
-/**
- * 許可するホスト名のリスト（SSRF対策）
- * next.config.ts の remotePatterns と同じ制限を適用
- */
-const ALLOWED_HOSTNAMES = [
-  'drive.google.com',
-  'lh3.googleusercontent.com',
-]
+import { ALLOWED_HOSTNAMES, IMAGE_CONSTANTS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 /**
  * プライベートIPアドレスかどうかを判定
@@ -112,9 +106,9 @@ export async function fetchImageAction(url: string): Promise<FetchImageResult> {
         return { error: `画像ではありません (Content-Type: ${contentType})` }
       }
 
-      // サイズ制限（10MB）
+      // サイズ制限（IMAGE_CONSTANTS.MAX_SIZE_BYTES）
       const contentLength = response.headers.get('content-length')
-      if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+      if (contentLength && parseInt(contentLength) > IMAGE_CONSTANTS.MAX_SIZE_BYTES) {
         return { error: '画像サイズが大きすぎます（上限10MB）' }
       }
 
@@ -122,7 +116,7 @@ export async function fetchImageAction(url: string): Promise<FetchImageResult> {
       const blob = await response.blob()
       
       // 実際のサイズチェック
-      if (blob.size > 10 * 1024 * 1024) {
+      if (blob.size > IMAGE_CONSTANTS.MAX_SIZE_BYTES) {
         return { error: '画像サイズが大きすぎます（上限10MB）' }
       }
       
@@ -141,7 +135,7 @@ export async function fetchImageAction(url: string): Promise<FetchImageResult> {
       clearTimeout(timeoutId)
     }
   } catch (error) {
-    console.error('Error fetching image:', error)
+    logger.error('Error fetching image:', error)
     
     if (error instanceof Error && error.name === 'AbortError') {
       return { error: '画像の取得がタイムアウトしました' }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchImageAction } from '@/app/actions/fetch-image';
+import { logger } from '@/lib/logger';
 
 /**
  * 外部URLから画像を取得するAPI Route
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       size: result.size,
     });
   } catch (error) {
-    console.error('Error in fetch-image API route:', error);
+    logger.error('Error in fetch-image API route:', error);
     
     return NextResponse.json(
       { error: error instanceof Error ? error.message : '不明なエラー' },

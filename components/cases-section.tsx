@@ -19,6 +19,8 @@ import { initializeApp } from "@/lib/init"
 import { withRetry } from "@/lib/browser"
 import { getSharedCaseFromUrl, decodeSharedCase, convertGoogleDriveUrl, type SharedCaseData } from "@/lib/share"
 import { fetchAndResizeImage, fetchImageFromUrl } from "@/lib/image-utils"
+import { IMAGE_CONSTANTS } from "@/lib/constants"
+import { logger } from "@/lib/logger"
 import { v4 as uuidv4 } from "uuid"
 
 interface CasesSectionProps {
@@ -51,7 +53,7 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       const casesData = await getAllCasesWithRetry()
       setCases(casesData)
     } catch (error) {
-      console.error("Failed to load cases:", error)
+      logger.error("Failed to load cases:", error)
     } finally {
       setIsLoading(false)
     }
@@ -178,8 +180,8 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       const afterUrl = convertGoogleDriveUrl(sharedCase.afterUrl)
       
       // 画像を取得 → リサイズ最適化 → IndexedDBへ保存
-      const beforeResized = await fetchAndResizeImage(beforeUrl, 2000, 0.9)
-      const afterResized = await fetchAndResizeImage(afterUrl, 2000, 0.9)
+      const beforeResized = await fetchAndResizeImage(beforeUrl, IMAGE_CONSTANTS.MAX_DIMENSION, IMAGE_CONSTANTS.QUALITY)
+      const afterResized = await fetchAndResizeImage(afterUrl, IMAGE_CONSTANTS.MAX_DIMENSION, IMAGE_CONSTANTS.QUALITY)
 
       const beforeImageId = uuidv4()
       const afterImageId = uuidv4()
@@ -261,7 +263,7 @@ export function CasesSection({ shareHash }: CasesSectionProps = {}) {
       await updateCase(updatedCase)
       await loadCases()
     } catch (error) {
-      console.error("Failed to save view settings:", error)
+      logger.error("Failed to save view settings:", error)
     }
   }
 

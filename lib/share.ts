@@ -2,6 +2,8 @@
  * 共有リンク用のデータ型定義とエンコード/デコード機能
  */
 
+import { ALLOWED_HOSTNAMES } from '@/lib/constants';
+
 export interface SharedCaseData {
   title?: string
   description?: string
@@ -119,7 +121,7 @@ export function convertGoogleDriveUrl(url: string): string {
     if (match && match[1]) {
       const fileId = match[1]
       // export=viewを使用して画像を直接取得（export=downloadはHTMLページを返すことがある）
-      const convertedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`
+      const convertedUrl = `https://${ALLOWED_HOSTNAMES[0]}/uc?export=view&id=${fileId}`
       return convertedUrl
     }
     

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { v4 as uuidv4 } from "uuid"
 import { generateShareUrl, type SharedCaseData } from "@/lib/share"
 import { useToast } from "@/components/ui/toast"
+import { logger } from "@/lib/logger"
 
 // モーダルコンポーネントを動的インポート（初期バンドルサイズ削減）
 const ImageLibrary = dynamic(() => import("@/components/image-library").then(mod => ({ default: mod.ImageLibrary })), {
@@ -47,7 +48,7 @@ export function ManageContent() {
       setImages(data.images)
       setShareableStatus(data.shareableStatus)
     } catch (error) {
-      console.error("Failed to load data:", error)
+      logger.error("Failed to load data:", error)
     } finally {
       setIsLoading(false)
     }
@@ -77,7 +78,7 @@ export function ManageContent() {
       await addCase(newCase)
       await loadData()
     } catch (error) {
-      console.error("Failed to add case:", error)
+      logger.error("Failed to add case:", error)
       showToast("CASEの追加に失敗しました", "error")
     }
   }, [cases.length, showToast])
@@ -92,7 +93,7 @@ export function ManageContent() {
       await loadData()
       setEditingCase(null)
     } catch (error) {
-      console.error("Failed to update case:", error)
+      logger.error("Failed to update case:", error)
       showToast("CASEの更新に失敗しました", "error")
     }
   }, [showToast])
@@ -106,7 +107,7 @@ export function ManageContent() {
       await deleteCase(id)
       await loadData()
     } catch (error) {
-      console.error("Failed to delete case:", error)
+      logger.error("Failed to delete case:", error)
       showToast("CASEの削除に失敗しました", "error")
     }
   }, [showToast])
@@ -125,7 +126,7 @@ export function ManageContent() {
       await addCase(duplicated)
       await loadData()
     } catch (error) {
-      console.error("Failed to duplicate case:", error)
+      logger.error("Failed to duplicate case:", error)
       showToast("CASEの複製に失敗しました", "error")
     }
   }, [cases.length, showToast])
@@ -142,7 +143,7 @@ export function ManageContent() {
       await reorderCases(newCases.map((c) => c.id))
       await loadData()
     } catch (error) {
-      console.error("Failed to reorder cases:", error)
+      logger.error("Failed to reorder cases:", error)
       showToast("並び替えに失敗しました", "error")
     }
   }, [cases, showToast])
@@ -159,7 +160,7 @@ export function ManageContent() {
       await reorderCases(newCases.map((c) => c.id))
       await loadData()
     } catch (error) {
-      console.error("Failed to reorder cases:", error)
+      logger.error("Failed to reorder cases:", error)
       showToast("並び替えに失敗しました", "error")
     }
   }, [cases, showToast])
@@ -201,7 +202,7 @@ export function ManageContent() {
       setShareLink(url)
       setSharingCase(caseRecord)
     } catch (error) {
-      console.error("Failed to generate share link:", error)
+      logger.error("Failed to generate share link:", error)
       setShareError("共有リンクの生成に失敗しました")
       setSharingCase(caseRecord)
     }

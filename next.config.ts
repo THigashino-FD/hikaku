@@ -1,20 +1,15 @@
 import type { NextConfig } from "next";
+import { ALLOWED_HOSTNAMES } from "./lib/constants";
 
 const nextConfig: NextConfig = {
   images: {
     // next/imageの外部URL最適化は限定的に使用
     // 共有プレビュー等の外部URLは <img> タグで直接表示（SafeImageコンポーネント）
     // IndexedDB保存後のblob URLのみ next/image で最適化
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'drive.google.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-    ],
+    remotePatterns: ALLOWED_HOSTNAMES.map(hostname => ({
+      protocol: 'https' as const,
+      hostname,
+    })),
     // SVGは使用しないため無効化
     dangerouslyAllowSVG: false,
     contentDispositionType: 'attachment',

@@ -20,6 +20,8 @@ import { resizeImage, formatFileSize, isAllowedImageType, fetchAndResizeImage } 
 import { v4 as uuidv4 } from "uuid"
 import { convertGoogleDriveUrl } from "@/lib/share"
 import { useToast } from "@/components/ui/toast"
+import { IMAGE_CONSTANTS, ALLOWED_HOSTNAMES } from "@/lib/constants"
+import { logger } from "@/lib/logger"
 
 interface ImageLibraryProps {
   onClose: () => void
@@ -55,7 +57,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       // 画像拡張子チェック（簡易）
       const pathname = urlObj.pathname.toLowerCase()
       const hasImageExt = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(pathname)
-      const isGoogleDrive = urlObj.hostname.includes("drive.google.com")
+      const isGoogleDrive = urlObj.hostname.includes(ALLOWED_HOSTNAMES[0])
       
       if (!hasImageExt && !isGoogleDrive) {
         return { valid: false, message: "画像ファイル（.jpg, .png, .gif, .webp等）のURLを入力してください" }
@@ -88,7 +90,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       setImages(imagesData)
       setUsageMap(usage)
     } catch (error) {
-      console.error("Failed to load images:", error)
+      logger.error("Failed to load images:", error)
     }
   }
 
@@ -112,7 +114,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       }
 
         // リサイズと最適化
-        const { blob, width, height } = await resizeImage(file, 2000, 0.9)
+        const { blob, width, height } = await resizeImage(file, IMAGE_CONSTANTS.MAX_DIMENSION, IMAGE_CONSTANTS.QUALITY)
 
         const imageRecord: ImageRecord = {
           id: uuidv4(),
@@ -135,7 +137,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
         fileInputRef.current.value = ""
       }
     } catch (error) {
-      console.error("Failed to upload images:", error)
+      logger.error("Failed to upload images:", error)
       showToast("画像の追加に失敗しました", "error")
     } finally {
       setIsUploading(false)
@@ -160,7 +162,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       await deleteImage(id)
       await loadData()
     } catch (error) {
-      console.error("Failed to delete image:", error)
+      logger.error("Failed to delete image:", error)
       showToast("画像の削除に失敗しました", "error")
     }
   }
@@ -178,7 +180,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       const normalizedUrl = convertGoogleDriveUrl(imageUrl.trim())
       
       // URLから画像を取得してリサイズ
-      const { blob, width, height, type } = await fetchAndResizeImage(normalizedUrl, 2000, 0.9)
+      const { blob, width, height, type } = await fetchAndResizeImage(normalizedUrl, IMAGE_CONSTANTS.MAX_DIMENSION, IMAGE_CONSTANTS.QUALITY)
 
       const imageRecord: ImageRecord = {
         id: uuidv4(),
@@ -200,7 +202,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       setShowUrlInput(false)
       showToast("URLから画像を追加しました", "success")
     } catch (error) {
-      console.error("Failed to add image from URL:", error)
+      logger.error("Failed to add image from URL:", error)
       showToast(`URLからの画像追加に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`, "error")
     } finally {
       setIsAddingFromUrl(false)
@@ -225,7 +227,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       await loadData()
       showToast("全てのデータを削除しました", "success")
     } catch (error) {
-      console.error("Failed to clear data:", error)
+      logger.error("Failed to clear data:", error)
       showToast("データの削除に失敗しました", "error")
     }
   }
@@ -316,7 +318,7 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
           
           {/* ファイルサイズ情報 */}
           <div className="w-full text-xs text-muted-foreground">
-            ※ 追加時、画像は自動的に最大2000px、品質90%に最適化されます（JPEG, PNG, GIF, WebP対応）
+            ※ 追加時、画像は自動的に最大{IMAGE_CONSTANTS.MAX_DIMENSION}px、品質{IMAGE_CONSTANTS.QUALITY * 100}%に最適化されます（JPEG, PNG, GIF, WebP対応）
           </div>
         </section>
 

@@ -10,6 +10,7 @@ import {
   revokeObjectURL,
   CaseRecord,
 } from "@/lib/db"
+import { logger } from "@/lib/logger"
 
 interface CaseViewerProps {
   caseRecord: CaseRecord
@@ -62,7 +63,7 @@ export function CaseViewer({ caseRecord, isFirst, onSaveViewSettings }: CaseView
           setAfterImageUrl("")
         }
       } catch (error) {
-        console.error("Failed to load images:", error)
+        logger.error("Failed to load images:", error)
       } finally {
         setIsLoading(false)
       }

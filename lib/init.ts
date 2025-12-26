@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDB, getAllCases, addCase, addImage, getAppConfig, setAppConfig, CaseRecord, ImageRecord } from './db';
 import { sleep } from "./browser";
+import { logger } from "./logger";
 
 /**
  * 画像URLからBlobを取得
@@ -21,7 +22,7 @@ async function fetchImageAsBlob(url: string): Promise<Blob> {
     }
     return await response.blob();
   } catch (error) {
-    console.error(`fetchImageAsBlob error: ${url}`, error);
+      logger.error(`fetchImageAsBlob error: ${url}`, error);
     throw error;
   }
 }
@@ -80,7 +81,7 @@ async function setupDefaultImage(
     await addImage(imageRecord);
     return imageRecord.id;
   } catch (error) {
-    console.error(`Failed to setup default image: ${imagePath}`, error);
+      logger.error(`Failed to setup default image: ${imagePath}`, error);
     throw error;
   }
 }
@@ -110,7 +111,7 @@ export async function setupDefaultCases(): Promise<void> {
       } catch (error) {
         retryCount++;
         if (retryCount >= maxRetries) {
-          console.error('[INIT] Failed to get existing cases after retries:', error);
+          logger.error('[INIT] Failed to get existing cases after retries:', error);
           throw error;
         }
         await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
@@ -129,7 +130,7 @@ export async function setupDefaultCases(): Promise<void> {
     
     // フラグが設定されているがCASEが存在しない場合は、フラグをリセットして再セットアップ
     if (isSetup && existingCases.length === 0) {
-      console.warn('[INIT] defaultCasesSetup flag is set but no cases exist, resetting flag and setting up...');
+      logger.warn('[INIT] defaultCasesSetup flag is set but no cases exist, resetting flag and setting up...');
       await setAppConfig('defaultCasesSetup', false);
       await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -139,7 +140,7 @@ export async function setupDefaultCases(): Promise<void> {
         const imageId = await setupDefaultImage(path, name);
         return imageId;
       } catch (e) {
-        console.error(`[INIT] Failed to setup ${path}:`, e);
+        logger.error(`[INIT] Failed to setup ${path}:`, e);
         return undefined;
       }
     };
@@ -161,7 +162,7 @@ export async function setupDefaultCases(): Promise<void> {
     if (!afterImage3Id) failedImages.push('case-03-after.png');
     
     if (failedImages.length > 0) {
-      console.warn(`[INIT] Failed to setup ${failedImages.length} images:`, failedImages);
+      logger.warn(`[INIT] Failed to setup ${failedImages.length} images:`, failedImages);
     }
 
     // CASE 01を作成
@@ -232,26 +233,26 @@ export async function setupDefaultCases(): Promise<void> {
     if (beforeImage1Id && afterImage1Id) {
       await saveAndVerify(case1);
     } else {
-      console.warn('[INIT] Skipping CASE 01 due to missing images');
+      logger.warn('[INIT] Skipping CASE 01 due to missing images');
     }
     
     if (beforeImage2Id && afterImage2Id) {
       await saveAndVerify(case2);
     } else {
-      console.warn('[INIT] Skipping CASE 02 due to missing images');
+      logger.warn('[INIT] Skipping CASE 02 due to missing images');
     }
     
     if (beforeImage3Id && afterImage3Id) {
       await saveAndVerify(case3);
     } else {
-      console.warn('[INIT] Skipping CASE 03 due to missing images');
+      logger.warn('[INIT] Skipping CASE 03 due to missing images');
     }
 
     // セットアップ完了フラグを保存
     await setAppConfig('defaultCasesSetup', true);
     await new Promise(resolve => setTimeout(resolve, 100));
   } catch (error) {
-    console.error('Failed to setup default cases:', error);
+    logger.error('Failed to setup default cases:', error);
     throw error;
   }
 }
@@ -272,7 +273,7 @@ export async function initializeApp(): Promise<void> {
         return;
       }
     } catch (error) {
-      console.error('[INIT] Error checking existing cases:', error);
+      logger.error('[INIT] Error checking existing cases:', error);
       // エラーが発生した場合は再試行
       initializeAppState.done = false;
       initializeAppState.inFlight = null;
@@ -288,10 +289,10 @@ export async function initializeApp(): Promise<void> {
 
     // WebKitでのIndexedDBの準備を待つ
     if (typeof window !== 'undefined') {
-      try {
-        if (!('indexedDB' in window)) {
-          console.error('[INIT] IndexedDB is not available');
-          return;
+        try {
+          if (!('indexedDB' in window)) {
+            logger.error('[INIT] IndexedDB is not available');
+            return;
         }
         
         let dbReady = false;
@@ -307,17 +308,17 @@ export async function initializeApp(): Promise<void> {
             if (retryCount >= maxRetries) throw dbError;
             await sleep(200 * retryCount);
           }
+          }
+        } catch (dbError) {
+          logger.error('[INIT] Failed to initialize database:', dbError);
         }
-      } catch (dbError) {
-        console.error('[INIT] Failed to initialize database:', dbError);
-      }
     }
   
     try {
       await setupDefaultCases();
       setupOk = true;
     } catch (error) {
-      console.error('Failed to initialize app:', error);
+      logger.error('Failed to initialize app:', error);
       
       // WebKitでのIndexedDBエラーの場合、リトライ
       const isIndexedDBError = error instanceof Error && (
@@ -337,11 +338,11 @@ export async function initializeApp(): Promise<void> {
           await setupDefaultCases();
           setupOk = true;
         } catch (retryError) {
-          console.error('[INIT] Retry also failed:', retryError);
+          logger.error('[INIT] Retry also failed:', retryError);
         }
       }
       
-      console.warn('[INIT] Continuing despite initialization error');
+      logger.warn('[INIT] Continuing despite initialization error');
     }
 
     // 初期化が成功した場合のみ「done」として固定し、失敗時は次回呼び出しで再試行できるようにする

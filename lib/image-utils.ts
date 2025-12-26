@@ -1,3 +1,5 @@
+import { IMAGE_CONSTANTS } from '@/lib/constants';
+
 /**
  * FileをImageオブジェクトとして読み込む
  */
@@ -103,8 +105,7 @@ export function formatFileSize(bytes: number): string {
  * 許可された画像形式かをチェック
  */
 export function isAllowedImageType(file: File): boolean {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  return allowedTypes.includes(file.type);
+  return IMAGE_CONSTANTS.ALLOWED_TYPES.includes(file.type as typeof IMAGE_CONSTANTS.ALLOWED_TYPES[number]);
 }
 
 /**
@@ -170,8 +171,8 @@ export function blobToFile(blob: Blob, filename: string): File {
  */
 export async function fetchAndResizeImage(
   url: string,
-  maxDimension: number = 2000,
-  quality: number = 0.9
+  maxDimension: number = IMAGE_CONSTANTS.MAX_DIMENSION,
+  quality: number = IMAGE_CONSTANTS.QUALITY
 ): Promise<{
   blob: Blob;
   width: number;

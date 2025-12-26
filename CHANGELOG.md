@@ -19,6 +19,15 @@ All notable changes to this project will be documented in this file.
   - 子コンポーネントへの不要なprops変更を防止
 
 ### Code Quality
+- 保守性向上のための改善
+  - マジックナンバーを定数化（`lib/constants.ts`に集約）
+    - 画像処理の定数（最大サイズ2000px、品質0.9、上限10MB）
+    - 許可ホスト名（Google Drive, lh3.googleusercontent.com）
+    - IndexedDB設定
+  - ロギングユーティリティの導入（`lib/logger.ts`）
+    - 本番環境では開発用ログを抑制
+    - エラーログは本番でも記録
+  - 全コンポーネント・ライブラリで定数とloggerを使用
 - Lintチェック修正
   - 未使用変数 `isAnimating` を削除
   - `useEffect`の依存配列を修正（`loadCases`を`useCallback`でメモ化）
