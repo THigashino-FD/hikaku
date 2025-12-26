@@ -204,12 +204,20 @@ export function ManageContent() {
       }
       setShareLink(url)
       setSharingCase(caseRecord)
+      
+      // 自動コピー
+      try {
+        await navigator.clipboard.writeText(url)
+        showToast("共有リンクを生成してコピーしました", "success")
+      } catch {
+        showToast("共有リンクを生成しました（コピーは失敗）", "warning")
+      }
     } catch (error) {
       logger.error("Failed to generate share link:", error)
       setShareError("共有リンクの生成に失敗しました")
       setSharingCase(caseRecord)
     }
-  }, [])
+  }, [showToast])
 
   const copyShareLink = useCallback(async () => {
     if (!shareLink) return

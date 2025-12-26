@@ -32,14 +32,58 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const [images, setImages] = useState<ImageRecordWithBlob[]>([])
   const [usageMap, setUsageMap] = useState<Map<string, string[]>>(new Map())
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 }) // 進捗状態
   const [searchQuery, setSearchQuery] = useState("")
   const [showUrlInput, setShowUrlInput] = useState(false)
   const [imageUrl, setImageUrl] = useState("")
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false)
   const [filterUrlOnly, setFilterUrlOnly] = useState(false) // URL画像のみフィルタ
   const [urlValidation, setUrlValidation] = useState<{ valid: boolean; message: string } | null>(null)
+  const [isDragging, setIsDragging] = useState(false) // ドラッグ中フラグ
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const { showToast } = useToast()
+
+  // フォーカストラップとESCキー対応
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+      
+      // Tab key focus trap
+      if (e.key === 'Tab') {
+        if (!modalRef.current) return
+        
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+        )
+        const firstElement = focusableElements[0] as HTMLElement
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+        
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault()
+            lastElement?.focus()
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault()
+            firstElement?.focus()
+          }
+        }
+      }
+    }
+    
+    // 初回フォーカス
+    closeButtonRef.current?.focus()
+    
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
 
   // URL検証関数
   const validateUrl = (url: string): { valid: boolean; message: string } => {
@@ -107,11 +151,23 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
     const files = e.target.files
     if (!files || files.length === 0) return
 
+    await processFiles(Array.from(files))
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  // ファイル処理を共通化
+  const processFiles = async (files: File[]) => {
     setIsUploading(true)
+    setUploadProgress({ current: 0, total: files.length })
 
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
+        setUploadProgress({ current: i + 1, total: files.length })
 
       if (!isAllowedImageType(file)) {
         showToast(`${file.name} はサポートされていない画像形式です`, "error")
@@ -136,17 +192,52 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
       }
 
       await loadData()
-      
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
+      showToast(`${files.length}件の画像を追加しました`, "success")
     } catch (error) {
       logger.error("Failed to upload images:", error)
       showToast("画像の追加に失敗しました", "error")
     } finally {
       setIsUploading(false)
+      setUploadProgress({ current: 0, total: 0 })
     }
+  }
+
+  // ドラッグ&ドロップハンドラー
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // モーダル外に出た場合のみドラッグ状態を解除
+    if (e.currentTarget === e.target) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.type.startsWith('image/')
+    )
+
+    if (files.length === 0) {
+      showToast("画像ファイルをドロップしてください", "warning")
+      return
+    }
+
+    await processFiles(files)
   }
 
   const handleDelete = async (id: string) => {
@@ -280,12 +371,31 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
   const totalSize = images.reduce((sum, img) => sum + img.size, 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <main className="relative flex h-full max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-background shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="image-library-title">
+      <main 
+        ref={modalRef} 
+        className="relative flex h-full max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-background shadow-xl"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {/* ドラッグ&ドロップオーバーレイ */}
+        {isDragging && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm border-4 border-dashed border-primary">
+            <div className="text-center">
+              <svg className="mx-auto h-16 w-16 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="mt-4 text-xl font-semibold text-primary">画像をドロップして追加</p>
+            </div>
+          </div>
+        )}
+        
         <header className="sticky top-0 z-40 border-b bg-card py-4 shadow-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
-            <h1 className="text-xl font-bold">画像ライブラリ</h1>
-            <Button variant="outline" onClick={onClose}>
+            <h1 id="image-library-title" className="text-xl font-bold">画像ライブラリ</h1>
+            <Button ref={closeButtonRef} variant="outline" onClick={onClose} aria-label="画像ライブラリを閉じる">
               閉じる
             </Button>
           </div>
@@ -335,7 +445,15 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
               title="対応形式: JPEG, PNG, GIF, WebP"
             >
               {isUploading ? (
-                <>処理中...</>
+                <>
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {uploadProgress.total > 1 
+                    ? `処理中... (${uploadProgress.current}/${uploadProgress.total})`
+                    : '処理中...'}
+                </>
               ) : (
                 <>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

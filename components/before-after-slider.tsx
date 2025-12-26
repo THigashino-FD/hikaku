@@ -244,6 +244,43 @@ export function BeforeAfterSlider({
     setSliderPosition(Math.min(Math.max(percentage, 0), 100))
   }, [])
 
+  // キーボードショートカット
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // アニメーション中の場合は中断
+    if (isAnimatingRef.current) {
+      cancelAnimation()
+    }
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault()
+        if (e.shiftKey) {
+          // Shift + 左矢印: 1%ずつ移動
+          setSliderPosition(prev => Math.max(prev - 1, 0))
+        } else {
+          // 左矢印: 5%ずつ移動
+          setSliderPosition(prev => Math.max(prev - 5, 0))
+        }
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        if (e.shiftKey) {
+          // Shift + 右矢印: 1%ずつ移動
+          setSliderPosition(prev => Math.min(prev + 1, 100))
+        } else {
+          // 右矢印: 5%ずつ移動
+          setSliderPosition(prev => Math.min(prev + 5, 100))
+        }
+        break
+      case ' ':
+      case 'Spacebar':
+        e.preventDefault()
+        // Spaceキー: 中央位置（50%）にリセット
+        setSliderPosition(50)
+        break
+    }
+  }, [])
+
   const handleStart = useCallback(() => {
     // アニメーション中の場合は中断（refを使って判定）
     if (isAnimatingRef.current) {
@@ -690,13 +727,21 @@ export function BeforeAfterSlider({
             style={{ left: `${sliderPosition}%` }}
             onMouseDown={handleStart}
             onTouchStart={handleStart}
+            onKeyDown={handleKeyDown}
+            role="slider"
+            aria-label="Before/After比較スライダー"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(sliderPosition)}
+            aria-valuetext={`${Math.round(sliderPosition)}%`}
+            tabIndex={0}
           >
             {/* Vertical Line */}
             <div className="relative h-full w-0.5 bg-primary/80 shadow-md">
               {/* Handle Circle */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-lg ring-1 ring-black/5">
-                  <svg className="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-6 w-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                   <svg
@@ -704,6 +749,7 @@ export function BeforeAfterSlider({
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

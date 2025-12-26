@@ -28,7 +28,49 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   const [afterImageUrl, setAfterImageUrl] = useState<string>("")
   const beforeUrlRef = useRef<string>("")
   const afterUrlRef = useRef<string>("")
+  const modalRef = useRef<HTMLDivElement>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const { showToast } = useToast()
+
+  // フォーカストラップとESCキー対応
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel()
+      }
+      
+      // Tab key focus trap
+      if (e.key === 'Tab') {
+        if (!modalRef.current) return
+        
+        const focusableElements = modalRef.current.querySelectorAll(
+          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+        )
+        const firstElement = focusableElements[0] as HTMLElement
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+        
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault()
+            lastElement?.focus()
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault()
+            firstElement?.focus()
+          }
+        }
+      }
+    }
+    
+    // 初回フォーカス
+    cancelButtonRef.current?.focus()
+    
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onCancel])
 
   useEffect(() => {
     let cancelled = false
@@ -111,13 +153,13 @@ export function CaseEditor({ caseRecord, images, onSave, onCancel }: CaseEditorP
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <main className="relative flex h-full max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-background shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="case-editor-title">
+      <main ref={modalRef} className="relative flex h-full max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-background shadow-xl">
         <header className="sticky top-0 z-40 border-b bg-card py-4 shadow-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
-            <h1 className="text-xl font-bold">CASE編集</h1>
+            <h1 id="case-editor-title" className="text-xl font-bold">CASE編集</h1>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onCancel}>
+              <Button ref={cancelButtonRef} variant="outline" onClick={onCancel} aria-label="キャンセル">
                 キャンセル
               </Button>
               <Button onClick={handleSave}>保存</Button>

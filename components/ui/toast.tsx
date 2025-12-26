@@ -5,14 +5,20 @@ import { cn } from "@/lib/utils"
 
 type ToastType = "success" | "error" | "info" | "warning"
 
+interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 interface Toast {
   id: string
   message: string
   type: ToastType
+  action?: ToastAction
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void
+  showToast: (message: string, type?: ToastType, action?: ToastAction) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -20,9 +26,9 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined)
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
-  const showToast = useCallback((message: string, type: ToastType = "info") => {
+  const showToast = useCallback((message: string, type: ToastType = "info", action?: ToastAction) => {
     const id = `${Date.now()}-${Math.random()}`
-    const newToast: Toast = { id, message, type }
+    const newToast: Toast = { id, message, type, action }
     
     setToasts((prev) => [...prev, newToast])
 
@@ -41,10 +47,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       
       {/* Toast Container */}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2" aria-live="polite" aria-atomic="true">
         {toasts.map((toast) => (
           <div
             key={toast.id}
+            role={toast.type === "error" ? "alert" : "status"}
+            aria-live={toast.type === "error" ? "assertive" : "polite"}
             className={cn(
               "pointer-events-auto animate-in slide-in-from-right-full fade-in duration-300",
               "flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg",
@@ -82,6 +90,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             
             {/* Message */}
             <div className="flex-1 text-sm font-medium">{toast.message}</div>
+            
+            {/* Action Button */}
+            {toast.action && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toast.action!.onClick()
+                  removeToast(toast.id)
+                }}
+                className="text-sm font-semibold underline underline-offset-2 hover:no-underline"
+              >
+                {toast.action.label}
+              </button>
+            )}
             
             {/* Close Button */}
             <button
