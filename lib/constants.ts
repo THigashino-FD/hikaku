@@ -87,6 +87,19 @@ export const ALLOWED_HOSTNAMES = [
   's3.amazonaws.com', // AWS S3（多くの企業が使用）
   's3-ap-northeast-1.amazonaws.com',
   'amazonaws.com',
+  
+  // 画像ホスティングサービス
+  'i.gyazo.com', // Gyazo
+  'gyazo.com',
+  'gyazoon.com', // Gyazoの別ドメイン
+  
+  // ソーシャルメディア・画像共有サービス
+  'pinterest.com',
+  'pinimg.com', // Pinterestの画像CDN
+  'i.pinimg.com',
+  
+  // 住宅・建築関連サイト
+  'freedom.co.jp', // フリーダムアーキテクツ
 ] as const;
 
 /**

@@ -336,6 +336,14 @@ export function ImageLibrary({ onClose }: ImageLibraryProps) {
                 URLから追加した画像は、共有リンクを通じて他の人も同じ画像を見ることができます。
               </p>
             </div>
+            <div className="mb-4 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm">
+              <p className="text-amber-800">
+                <strong>⚠️ セキュリティ上の理由により、使用可能なURLを制限しています。</strong>
+              </p>
+              <p className="mt-1 text-amber-700">
+                HTTPSのパブリックな画像URLのみ使用可能です。プライベートネットワークへのアクセスは許可されていません。
+              </p>
+            </div>
             <p className="mb-4 text-sm text-muted-foreground">
               画像の直リンクURLを入力してください。Google DriveのURLは自動で変換されます。
             </p>
